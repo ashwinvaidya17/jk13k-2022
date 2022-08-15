@@ -1,6 +1,7 @@
 (() => {
   // node_modules/kontra/kontra.mjs
-  var noop = () => {};
+  var noop = () => {
+  };
   var callbacks$2 = {};
   function emit(event, ...args) {
     (callbacks$2[event] || []).map((fn) => fn(...args));
@@ -9,18 +10,16 @@
   var context;
   var handler$1 = {
     get(target, key) {
-      if (key == "_proxy") return true;
+      if (key == "_proxy")
+        return true;
       return noop;
-    },
+    }
   };
   function getContext() {
     return context;
   }
   function init$1(canvas2, { contextless = false } = {}) {
-    canvasEl =
-      document.getElementById(canvas2) ||
-      canvas2 ||
-      document.querySelector("canvas");
+    canvasEl = document.getElementById(canvas2) || canvas2 || document.querySelector("canvas");
     if (contextless) {
       canvasEl = canvasEl || new Proxy({}, handler$1);
     }
@@ -31,6 +30,27 @@
   }
   function clamp(min, max, value) {
     return Math.min(Math.max(min, value), max);
+  }
+  function collides(obj1, obj2) {
+    [obj1, obj2] = [obj1, obj2].map((obj) => getWorldRect(obj));
+    return obj1.x < obj2.x + obj2.width && obj1.x + obj1.width > obj2.x && obj1.y < obj2.y + obj2.height && obj1.y + obj1.height > obj2.y;
+  }
+  function getWorldRect(obj) {
+    let { x = 0, y = 0, width, height } = obj.world || obj;
+    if (obj.mapwidth) {
+      width = obj.mapwidth;
+      height = obj.mapheight;
+    }
+    if (obj.anchor) {
+      x -= width * obj.anchor.x;
+      y -= height * obj.anchor.y;
+    }
+    return {
+      x,
+      y,
+      width,
+      height
+    };
   }
   var Vector = class {
     constructor(x = 0, y = 0, vec = {}) {
@@ -105,7 +125,8 @@
     isAlive() {
       return this.ttl > 0;
     }
-    _pc() {}
+    _pc() {
+    }
   };
   var GameObject = class extends Updatable {
     init({
@@ -124,7 +145,7 @@
         context: context2,
         anchor,
         opacity,
-        ...props,
+        ...props
       });
       this._di = true;
       this._uw();
@@ -152,7 +173,8 @@
       }
       context2.restore();
     }
-    draw() {}
+    draw() {
+    }
     _pc() {
       this._uw();
     }
@@ -185,8 +207,13 @@
       this._pc();
     }
     _uw() {
-      if (!this._di) return;
-      let { _wx = 0, _wy = 0, _wo = 1 } = this.parent || {};
+      if (!this._di)
+        return;
+      let {
+        _wx = 0,
+        _wy = 0,
+        _wo = 1
+      } = this.parent || {};
       this._wx = this.x;
       this._wy = this.y;
       this._ww = this.width;
@@ -199,7 +226,7 @@
         y: this._wy,
         width: this._ww,
         height: this._wh,
-        opacity: this._wo,
+        opacity: this._wo
       };
     }
     get opacity() {
@@ -211,9 +238,11 @@
     }
   };
   var Sprite = class extends GameObject {
-    init({ ...props } = {}) {
+    init({
+      ...props
+    } = {}) {
       super.init({
-        ...props,
+        ...props
       });
     }
     draw() {
@@ -236,7 +265,7 @@
     update = noop,
     render,
     context: context2 = getContext(),
-    blur = false,
+    blur = false
   } = {}) {
     let accumulator = 0;
     let delta = 1e3 / fps;
@@ -254,7 +283,8 @@
     }
     function frame() {
       rAF = requestAnimationFrame(frame);
-      if (!focused) return;
+      if (!focused)
+        return;
       now = performance.now();
       dt = now - last;
       last = now;
@@ -282,31 +312,126 @@
       stop() {
         this.isStopped = true;
         cancelAnimationFrame(rAF);
-      },
+      }
     };
     return loop2;
+  }
+  var keydownCallbacks = {};
+  var keyupCallbacks = {};
+  var pressedKeys = {};
+  var keyMap = {
+    Enter: "enter",
+    Escape: "esc",
+    Space: "space",
+    ArrowLeft: "arrowleft",
+    ArrowUp: "arrowup",
+    ArrowRight: "arrowright",
+    ArrowDown: "arrowdown"
+  };
+  function call(callback = noop, evt) {
+    if (callback._pd) {
+      evt.preventDefault();
+    }
+    callback(evt);
+  }
+  function keydownEventHandler(evt) {
+    let key = keyMap[evt.code];
+    let callback = keydownCallbacks[key];
+    pressedKeys[key] = true;
+    call(callback, evt);
+  }
+  function keyupEventHandler(evt) {
+    let key = keyMap[evt.code];
+    let callback = keyupCallbacks[key];
+    pressedKeys[key] = false;
+    call(callback, evt);
+  }
+  function blurEventHandler() {
+    pressedKeys = {};
+  }
+  function initKeys() {
+    let i;
+    for (i = 0; i < 26; i++) {
+      keyMap["Key" + String.fromCharCode(i + 65)] = String.fromCharCode(
+        i + 97
+      );
+    }
+    for (i = 0; i < 10; i++) {
+      keyMap["Digit" + i] = keyMap["Numpad" + i] = "" + i;
+    }
+    window.addEventListener("keydown", keydownEventHandler);
+    window.addEventListener("keyup", keyupEventHandler);
+    window.addEventListener("blur", blurEventHandler);
+  }
+  function keyPressed(key) {
+    return !!pressedKeys[key];
+  }
+
+  // js/constants.js
+  var gravity = 200;
+
+  // js/agent.js
+  initKeys();
+  var speed = 200;
+  var jumpForce = -250;
+  function Agent() {
+    return factory$8({
+      x: 0,
+      y: 0,
+      width: 20,
+      height: 40,
+      color: "white",
+      y_vel: 0,
+      apply_gravity: false,
+      update: function(dt) {
+        if (keyPressed("arrowleft")) {
+          this.x -= speed * dt;
+        }
+        if (keyPressed("arrowright")) {
+          this.x += speed * dt;
+        }
+        if (keyPressed("space") && !this.apply_gravity) {
+          this.y_vel = jumpForce;
+        }
+        if (this.apply_gravity) {
+          this.y_vel += gravity * dt;
+          this.y += this.y_vel * dt;
+        }
+      }
+    });
+  }
+
+  // js/temp_room.js
+  function MakeRoom() {
+    return factory$8({
+      x: 0,
+      y: 760,
+      width: 800,
+      height: 40,
+      color: "white"
+    });
   }
 
   // js/game.js
   var { canvas } = init$1();
-  var sprite = factory$8({
-    x: 100,
-    y: 80,
-    color: "red",
-    width: 20,
-    height: 40,
-    dx: 2,
-  });
+  var agent = Agent();
+  var room = MakeRoom();
   var loop = GameLoop({
-    update: function () {
-      sprite.update();
-      if (sprite.x > canvas.width) {
-        sprite.x = -sprite.width;
+    update: function(dt) {
+      room.update();
+      agent.update(dt);
+      if (collides(agent, room)) {
+        agent.y = room.y - agent.height;
+        agent.y_vel = 0;
+        agent.apply_gravity = false;
+      } else {
+        agent.apply_gravity = true;
       }
     },
-    render: function () {
-      sprite.render();
-    },
+    render: function() {
+      room.render();
+      agent.render();
+    }
   });
   loop.start();
 })();

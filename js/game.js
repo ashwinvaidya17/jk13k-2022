@@ -1,31 +1,30 @@
-import { GameLoop, init, Sprite } from "kontra";
+import { collides, GameLoop, init } from "kontra";
+import Agent from "./agent";
+import MakeRoom from "./temp_room";
 
-let { canvas } = init();
+init();
 
-let sprite = Sprite({
-  x: 100, // starting x,y position of the sprite
-  y: 80,
-  color: "red", // fill color of the sprite rectangle
-  width: 20, // width and height of the sprite rectangle
-  height: 40,
-  dx: 2, // move the sprite 2px to the right every frame
-});
+let agent = Agent();
+let room = MakeRoom();
 
 let loop = GameLoop({
   // create the main game loop
-  update: function () {
+  update: function (dt) {
     // update the game state
-    sprite.update();
-
-    // wrap the sprites position when it reaches
-    // the edge of the screen
-    if (sprite.x > canvas.width) {
-      sprite.x = -sprite.width;
+    room.update();
+    agent.update(dt);
+    if (collides(agent, room)) {
+      agent.y = room.y - agent.height;
+      agent.y_vel = 0;
+      agent.apply_gravity = false;
+    } else {
+      agent.apply_gravity = true;
     }
   },
   render: function () {
     // render the game state
-    sprite.render();
+    room.render();
+    agent.render();
   },
 });
 
