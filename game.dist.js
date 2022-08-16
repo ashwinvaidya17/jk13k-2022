@@ -2,7 +2,29 @@
   // node_modules/kontra/kontra.mjs
   var noop = () => {
   };
+  var srOnlyStyle = "position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);";
+  function addToDom(node, canvas) {
+    let container = canvas.parentNode;
+    node.setAttribute("data-kontra", "");
+    if (container) {
+      let target = container.querySelector("[data-kontra]:last-of-type") || canvas;
+      container.insertBefore(node, target.nextSibling);
+    } else {
+      document.body.appendChild(node);
+    }
+  }
+  function removeFromArray(array, item) {
+    let index = array.indexOf(item);
+    if (index != -1) {
+      array.splice(index, 1);
+      return true;
+    }
+  }
   var callbacks$2 = {};
+  function on(event, callback) {
+    callbacks$2[event] = callbacks$2[event] || [];
+    callbacks$2[event].push(callback);
+  }
   function emit(event, ...args) {
     (callbacks$2[event] || []).map((fn) => fn(...args));
   }
@@ -15,11 +37,14 @@
       return noop;
     }
   };
+  function getCanvas() {
+    return canvasEl;
+  }
   function getContext() {
     return context;
   }
-  function init$1(canvas2, { contextless = false } = {}) {
-    canvasEl = document.getElementById(canvas2) || canvas2 || document.querySelector("canvas");
+  function init$1(canvas, { contextless = false } = {}) {
+    canvasEl = document.getElementById(canvas) || canvas || document.querySelector("canvas");
     if (contextless) {
       canvasEl = canvasEl || new Proxy({}, handler$1);
     }
@@ -27,6 +52,14 @@
     context.imageSmoothingEnabled = false;
     emit("init");
     return { canvas: canvasEl, context };
+  }
+  function rotatePoint(point, angle) {
+    let sin = Math.sin(angle);
+    let cos = Math.cos(angle);
+    return {
+      x: point.x * cos - point.y * sin,
+      y: point.x * sin + point.y * cos
+    };
   }
   function clamp(min, max, value) {
     return Math.min(Math.max(min, value), max);
@@ -56,36 +89,9 @@
     constructor(x = 0, y = 0, vec = {}) {
       this.x = x;
       this.y = y;
-      if (vec._c) {
-        this.clamp(vec._a, vec._b, vec._d, vec._e);
-        this.x = x;
-        this.y = y;
-      }
     }
     add(vec) {
       return new Vector(this.x + vec.x, this.y + vec.y, this);
-    }
-    length() {
-      return Math.hypot(this.x, this.y);
-    }
-    clamp(xMin, yMin, xMax, yMax) {
-      this._c = true;
-      this._a = xMin;
-      this._b = yMin;
-      this._d = xMax;
-      this._e = yMax;
-    }
-    get x() {
-      return this._x;
-    }
-    get y() {
-      return this._y;
-    }
-    set x(value) {
-      this._x = this._c ? clamp(this._a, this._d, value) : value;
-    }
-    set y(value) {
-      this._y = this._c ? clamp(this._b, this._e, value) : value;
     }
   };
   function factory$a() {
@@ -136,7 +142,7 @@
       render = this.draw,
       update = this.advance,
       anchor = { x: 0, y: 0 },
-      opacity = 1,
+      rotation = 0,
       ...props
     } = {}) {
       super.init({
@@ -144,7 +150,7 @@
         height,
         context: context2,
         anchor,
-        opacity,
+        rotation,
         ...props
       });
       this._di = true;
@@ -161,12 +167,14 @@
       if (this.x || this.y) {
         context2.translate(this.x, this.y);
       }
+      if (this.rotation) {
+        context2.rotate(this.rotation);
+      }
       let anchorX = -this.width * this.anchor.x;
       let anchorY = -this.height * this.anchor.y;
       if (anchorX || anchorY) {
         context2.translate(anchorX, anchorY);
       }
-      this.context.globalAlpha = this.opacity;
       this._rf();
       if (anchorX || anchorY) {
         context2.translate(-anchorX, -anchorY);
@@ -212,13 +220,16 @@
       let {
         _wx = 0,
         _wy = 0,
-        _wo = 1
+        _wr = 0
       } = this.parent || {};
       this._wx = this.x;
       this._wy = this.y;
       this._ww = this.width;
       this._wh = this.height;
-      this._wo = _wo * this.opacity;
+      this._wr = _wr + this.rotation;
+      let { x, y } = rotatePoint({ x: this._wx, y: this._wy }, _wr);
+      this._wx = x;
+      this._wy = y;
     }
     get world() {
       return {
@@ -226,17 +237,20 @@
         y: this._wy,
         width: this._ww,
         height: this._wh,
-        opacity: this._wo
+        rotation: this._wr
       };
     }
-    get opacity() {
-      return this._opa;
+    get rotation() {
+      return this._rot;
     }
-    set opacity(value) {
-      this._opa = value;
+    set rotation(value) {
+      this._rot = value;
       this._pc();
     }
   };
+  function factory$9() {
+    return new GameObject(...arguments);
+  }
   var Sprite = class extends GameObject {
     init({
       ...props
@@ -255,9 +269,179 @@
   function factory$8() {
     return new Sprite(...arguments);
   }
+  var pointers = /* @__PURE__ */ new WeakMap();
+  var callbacks$1 = {};
+  var pressedButtons = {};
+  var pointerMap = {
+    0: "left",
+    1: "middle",
+    2: "right"
+  };
+  function getPointer(canvas = getCanvas()) {
+    return pointers.get(canvas);
+  }
+  function circleRectCollision(object, pointer) {
+    let { x, y, width, height } = getWorldRect(object);
+    do {
+      x -= object.sx || 0;
+      y -= object.sy || 0;
+    } while (object = object.parent);
+    let dx = pointer.x - Math.max(x, Math.min(pointer.x, x + width));
+    let dy = pointer.y - Math.max(y, Math.min(pointer.y, y + height));
+    return dx * dx + dy * dy < pointer.radius * pointer.radius;
+  }
+  function getCurrentObject(pointer) {
+    let renderedObjects = pointer._lf.length ? pointer._lf : pointer._cf;
+    for (let i = renderedObjects.length - 1; i >= 0; i--) {
+      let object = renderedObjects[i];
+      let collides2 = object.collidesWithPointer ? object.collidesWithPointer(pointer) : circleRectCollision(object, pointer);
+      if (collides2) {
+        return object;
+      }
+    }
+  }
+  function getPropValue(style, value) {
+    return parseFloat(style.getPropertyValue(value)) || 0;
+  }
+  function getCanvasOffset(pointer) {
+    let { canvas, _s } = pointer;
+    let rect = canvas.getBoundingClientRect();
+    let transform = _s.transform != "none" ? _s.transform.replace("matrix(", "").split(",") : [1, 1, 1, 1];
+    let transformScaleX = parseFloat(transform[0]);
+    let transformScaleY = parseFloat(transform[3]);
+    let borderWidth = (getPropValue(_s, "border-left-width") + getPropValue(_s, "border-right-width")) * transformScaleX;
+    let borderHeight = (getPropValue(_s, "border-top-width") + getPropValue(_s, "border-bottom-width")) * transformScaleY;
+    let paddingWidth = (getPropValue(_s, "padding-left") + getPropValue(_s, "padding-right")) * transformScaleX;
+    let paddingHeight = (getPropValue(_s, "padding-top") + getPropValue(_s, "padding-bottom")) * transformScaleY;
+    return {
+      scaleX: (rect.width - borderWidth - paddingWidth) / canvas.width,
+      scaleY: (rect.height - borderHeight - paddingHeight) / canvas.height,
+      offsetX: rect.left + (getPropValue(_s, "border-left-width") + getPropValue(_s, "padding-left")) * transformScaleX,
+      offsetY: rect.top + (getPropValue(_s, "border-top-width") + getPropValue(_s, "padding-top")) * transformScaleY
+    };
+  }
+  function pointerDownHandler(evt) {
+    let button = evt.button != null ? pointerMap[evt.button] : "left";
+    pressedButtons[button] = true;
+    pointerHandler(evt, "onDown");
+  }
+  function pointerUpHandler(evt) {
+    let button = evt.button != null ? pointerMap[evt.button] : "left";
+    pressedButtons[button] = false;
+    pointerHandler(evt, "onUp");
+  }
+  function mouseMoveHandler(evt) {
+    pointerHandler(evt, "onOver");
+  }
+  function blurEventHandler$2(evt) {
+    let pointer = pointers.get(evt.target);
+    pointer._oo = null;
+    pressedButtons = {};
+  }
+  function callCallback(pointer, eventName, evt) {
+    let object = getCurrentObject(pointer);
+    if (object && object[eventName]) {
+      object[eventName](evt);
+    }
+    if (callbacks$1[eventName]) {
+      callbacks$1[eventName](evt, object);
+    }
+    if (eventName == "onOver") {
+      if (object != pointer._oo && pointer._oo && pointer._oo.onOut) {
+        pointer._oo.onOut(evt);
+      }
+      pointer._oo = object;
+    }
+  }
+  function pointerHandler(evt, eventName) {
+    evt.preventDefault();
+    let canvas = evt.target;
+    let pointer = pointers.get(canvas);
+    let { scaleX, scaleY, offsetX, offsetY } = getCanvasOffset(pointer);
+    let isTouchEvent = evt.type.includes("touch");
+    if (isTouchEvent) {
+      Array.from(evt.touches).map(
+        ({ clientX, clientY, identifier }) => {
+          let touch = pointer.touches[identifier];
+          if (!touch) {
+            touch = pointer.touches[identifier] = {
+              start: {
+                x: (clientX - offsetX) / scaleX,
+                y: (clientY - offsetY) / scaleY
+              }
+            };
+            pointer.touches.length++;
+          }
+          touch.changed = false;
+        }
+      );
+      Array.from(evt.changedTouches).map(
+        ({ clientX, clientY, identifier }) => {
+          let touch = pointer.touches[identifier];
+          touch.changed = true;
+          touch.x = pointer.x = (clientX - offsetX) / scaleX;
+          touch.y = pointer.y = (clientY - offsetY) / scaleY;
+          callCallback(pointer, eventName, evt);
+          emit("touchChanged", evt, pointer.touches);
+          if (eventName == "onUp") {
+            delete pointer.touches[identifier];
+            pointer.touches.length--;
+            if (!pointer.touches.length) {
+              emit("touchEnd");
+            }
+          }
+        }
+      );
+    } else {
+      pointer.x = (evt.clientX - offsetX) / scaleX;
+      pointer.y = (evt.clientY - offsetY) / scaleY;
+      callCallback(pointer, eventName, evt);
+    }
+  }
+  function initPointer({
+    radius = 5,
+    canvas = getCanvas()
+  } = {}) {
+    let pointer = pointers.get(canvas);
+    if (!pointer) {
+      let style = window.getComputedStyle(canvas);
+      pointer = {
+        x: 0,
+        y: 0,
+        radius,
+        touches: { length: 0 },
+        canvas,
+        _cf: [],
+        _lf: [],
+        _o: [],
+        _oo: null,
+        _s: style
+      };
+      pointers.set(canvas, pointer);
+    }
+    canvas.addEventListener("mousedown", pointerDownHandler);
+    canvas.addEventListener("touchstart", pointerDownHandler);
+    canvas.addEventListener("mouseup", pointerUpHandler);
+    canvas.addEventListener("touchend", pointerUpHandler);
+    canvas.addEventListener("touchcancel", pointerUpHandler);
+    canvas.addEventListener("blur", blurEventHandler$2);
+    canvas.addEventListener("mousemove", mouseMoveHandler);
+    canvas.addEventListener("touchmove", mouseMoveHandler);
+    if (!pointer._t) {
+      pointer._t = true;
+      on("tick", () => {
+        pointer._lf.length = 0;
+        pointer._cf.map((object) => {
+          pointer._lf.push(object);
+        });
+        pointer._cf.length = 0;
+      });
+    }
+    return pointer;
+  }
   function clear(context2) {
-    let canvas2 = context2.canvas;
-    context2.clearRect(0, 0, canvas2.width, canvas2.height);
+    let canvas = context2.canvas;
+    context2.clearRect(0, 0, canvas.width, canvas.height);
   }
   function GameLoop({
     fps = 60,
@@ -366,6 +550,155 @@
   function keyPressed(key) {
     return !!pressedKeys[key];
   }
+  function getAllNodes(object) {
+    let nodes = [];
+    if (object._dn) {
+      nodes.push(object._dn);
+    } else if (object.children) {
+      object.children.map((child) => {
+        nodes = nodes.concat(getAllNodes(child));
+      });
+    }
+    return nodes;
+  }
+  var Scene = class {
+    constructor({
+      id,
+      name = id,
+      objects = [],
+      context: context2 = getContext(),
+      cullObjects = true,
+      cullFunction = collides,
+      sortFunction,
+      ...props
+    }) {
+      this._o = [];
+      let canvas = context2.canvas;
+      let section = this._dn = document.createElement("section");
+      section.tabIndex = -1;
+      section.style = srOnlyStyle;
+      section.id = id;
+      section.setAttribute("aria-label", name);
+      addToDom(section, canvas);
+      Object.assign(this, {
+        id,
+        name,
+        context: context2,
+        cullObjects,
+        cullFunction,
+        sortFunction,
+        ...props
+      });
+      let { width, height } = canvas;
+      let x = width / 2;
+      let y = height / 2;
+      this.camera = factory$9({
+        x,
+        y,
+        width,
+        height,
+        context: context2,
+        centerX: x,
+        centerY: y,
+        anchor: { x: 0.5, y: 0.5 },
+        render: this._rf.bind(this)
+      });
+      this.add(objects);
+    }
+    set objects(value) {
+      this.remove(this._o);
+      this.add(value);
+    }
+    get objects() {
+      return this._o;
+    }
+    add(...objects) {
+      objects.flat().map((object) => {
+        this._o.push(object);
+        getAllNodes(object).map((node) => {
+          this._dn.appendChild(node);
+        });
+      });
+    }
+    remove(...objects) {
+      objects.flat().map((object) => {
+        removeFromArray(this._o, object);
+        getAllNodes(object).map((node) => {
+          addToDom(node, this.context);
+        });
+      });
+    }
+    show() {
+      this.hidden = this._dn.hidden = false;
+      let focusableObject = this._o.find((object) => object.focus);
+      if (focusableObject) {
+        focusableObject.focus();
+      } else {
+        this._dn.focus();
+      }
+      this.onShow();
+    }
+    hide() {
+      this.hidden = this._dn.hidden = true;
+      this.onHide();
+    }
+    destroy() {
+      this._dn.remove();
+      this._o.map((object) => object.destroy && object.destroy());
+    }
+    lookAt(object) {
+      let { x, y } = object.world || object;
+      this.camera.x = x;
+      this.camera.y = y;
+    }
+    update(dt) {
+      if (!this.hidden) {
+        this._o.map((object) => object.update && object.update(dt));
+      }
+    }
+    _rf() {
+      let {
+        _o,
+        context: context2,
+        _sx,
+        _sy,
+        camera,
+        sortFunction,
+        cullObjects,
+        cullFunction
+      } = this;
+      context2.translate(_sx, _sy);
+      let objects = _o;
+      if (cullObjects) {
+        objects = objects.filter(
+          (object) => cullFunction(camera, object)
+        );
+      }
+      if (sortFunction) {
+        objects.sort(sortFunction);
+      }
+      objects.map((object) => object.render && object.render());
+    }
+    render() {
+      if (!this.hidden) {
+        let { context: context2, camera } = this;
+        let { x, y, centerX, centerY } = camera;
+        context2.save();
+        this._sx = centerX - x;
+        this._sy = centerY - y;
+        context2.translate(this._sx, this._sy);
+        camera.render();
+        context2.restore();
+      }
+    }
+    onShow() {
+    }
+    onHide() {
+    }
+  };
+  function factory$2() {
+    return new Scene(...arguments);
+  }
 
   // js/constants.js
   var gravity = 200;
@@ -375,15 +708,33 @@
   var speed = 200;
   var jumpForce = -250;
   function Agent() {
-    return factory$8({
+    let body = factory$8({
       x: 0,
       y: 0,
       width: 20,
       height: 40,
+      color: "white"
+    });
+    let gun = factory$8({
+      x: body.width + 10,
+      y: 3,
+      width: 20,
+      height: 5,
       color: "white",
+      rotation: 0,
+      anchor: { x: 0, y: this.y }
+    });
+    return factory$9({
+      x: 0,
+      y: 400,
+      rotation: 0,
+      width: body.width,
+      height: body.height,
+      children: [body, gun],
       y_vel: 0,
       apply_gravity: false,
       update: function(dt) {
+        this.children.forEach((child) => child.update(dt));
         if (keyPressed("arrowleft")) {
           this.x -= speed * dt;
         }
@@ -397,34 +748,64 @@
           this.y_vel += gravity * dt;
           this.y += this.y_vel * dt;
         }
+        let pointer = getPointer();
+        this.children[1].rotation = Math.atan2(
+          pointer.y - this.y,
+          pointer.x - this.x
+        );
+        this.children[1].rotation = clamp(
+          -Math.PI / 2,
+          Math.PI / 2,
+          this.children[1].rotation
+        );
+      },
+      render: function() {
+        this.children.forEach((child) => child.render());
       }
     });
   }
 
   // js/temp_room.js
   function MakeRoom() {
-    return factory$8({
+    let ground1 = factory$8({
       x: 0,
       y: 760,
       width: 800,
       height: 40,
       color: "white"
     });
+    let ground2 = factory$8({
+      x: 400,
+      y: 650,
+      width: 400,
+      height: 40,
+      color: "white"
+    });
+    return factory$2({
+      id: "room",
+      objects: [ground1, ground2]
+    });
   }
 
   // js/game.js
-  var { canvas } = init$1();
+  init$1();
+  initPointer();
   var agent = Agent();
   var room = MakeRoom();
   var loop = GameLoop({
     update: function(dt) {
       room.update();
       agent.update(dt);
-      if (collides(agent, room)) {
-        agent.y = room.y - agent.height;
-        agent.y_vel = 0;
-        agent.apply_gravity = false;
-      } else {
+      let collision = false;
+      for (let obj of room.objects) {
+        if (collides(agent, obj)) {
+          agent.y = obj.y - agent.height;
+          agent.y_vel = 0;
+          agent.apply_gravity = false;
+          collision = true;
+        }
+      }
+      if (!collision) {
         agent.apply_gravity = true;
       }
     },
