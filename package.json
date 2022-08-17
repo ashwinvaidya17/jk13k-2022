@@ -10,14 +10,22 @@
     "esbuild": "^0.14.51",
     "esbuild-plugin-kontra": "^1.0.0",
     "eslint": "^8.22.0",
-    "js13k-packer": "^1.0.2"
+    "js13k-packer": "^1.0.2",
+    "npm-watch": "^0.11.0"
+  },
+  "watch": {
+    "build": [
+      "index.html",
+      "js/*.js"
+    ]
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "node build.js",
     "clean": "rm -rf dist",
     "prepare": "mkdir dist && cp logo.png dist",
-    "pack": "npm run clean && npm run prepare && js13k-packer index.html dist -o time-shooter.zip && cp dist/time-shooter.zip . && npm run clean"
+    "pack": "npm run clean && npm run prepare && js13k-packer index.html dist -o time-shooter.zip && cp dist/time-shooter.zip . && npm run clean",
+    "watch": "npm-watch"
   },
   "repository": {
     "type": "git",

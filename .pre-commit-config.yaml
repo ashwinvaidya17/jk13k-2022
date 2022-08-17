@@ -1,27 +1,23 @@
-- repo: https://github.com/pre-commit/mirrors-eslint
-  rev: "v8.22.0" # Use the sha / tag you want to point at
-  hooks:
-    - id: eslint
+repos:
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: "v8.22.0" # Use the sha / tag you want to point at
+    hooks:
+      - id: eslint
 
-- repo: https://github.com/pre-commit/mirrors-prettier
-  rev: "v2.7.1" # Use the sha / tag you want to point at
-  hooks:
-    - id: prettier
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: "v2.7.1" # Use the sha / tag you want to point at
+    hooks:
+      - id: prettier
+        exclude: "game.dist.js|.vscode"
 
-- repo: https://github.com/pre-commit/mirrors-jshint
-  rev: "v2.13.5" # Use the sha / tag you want to point at
-  hooks:
-    - id: jshint
-      exclude: "node_modules|game.dist.js|build.js"
+  - repo: https://github.com/pre-commit/mirrors-jshint
+    rev: "v2.13.5" # Use the sha / tag you want to point at
+    hooks:
+      - id: jshint
+        exclude: "node_modules|game.dist.js|build.js"
 
-- repo: https://github.com/pre-commit/mirrors-fixmyjs
-  rev: "v2.0.0" # Use the sha / tag you want to point at
-  hooks:
-    - id: fixmyjs
-      exclude: "node_modules|game.dist.js"
-
-- repo: https://github.com/pre-commit/mirrors-csslint
-  rev: "v1.0.5" # Use the sha / tag you want to point at
-  hooks:
-    - id: csslint
-      exclude: "node_modules|game.dist.js"
+  - repo: https://github.com/pre-commit/mirrors-csslint
+    rev: "v1.0.5" # Use the sha / tag you want to point at
+    hooks:
+      - id: csslint
+        exclude: "node_modules|game.dist.js"

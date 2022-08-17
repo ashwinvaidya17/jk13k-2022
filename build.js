@@ -9,9 +9,10 @@ esbuild.build({
     kontra({
       gameObject: {
         anchor: true,
-        opacity: true,
+        opacity: false,
         ttl: true,
         velocity: true,
+        rotation: true,
       },
       text: {
         newline: true,
@@ -19,8 +20,8 @@ esbuild.build({
         textAlign: true,
       },
       vector: {
-        clamp: true,
-        length: true,
+        clamp: false,
+        length: false,
       },
     }),
   ],
