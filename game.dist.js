@@ -713,16 +713,26 @@
       y: 0,
       width: 20,
       height: 40,
-      color: "white"
+      color: "white",
+      flip_direction: function() {
+      }
     });
     let gun = factory$8({
-      x: body.width + 10,
+      x: body.width,
       y: 3,
-      width: 20,
+      width: 30,
       height: 5,
       color: "white",
       rotation: 0,
-      anchor: { x: 0, y: this.y }
+      anchor: { x: 0, y: 0 },
+      flip_direction: function(right) {
+        if (right) {
+          this.x = body.width;
+        } else {
+          this.x = 0;
+        }
+        console.log(this.x, this.y, this.width, this.height);
+      }
     });
     return factory$9({
       x: 0,
@@ -733,13 +743,15 @@
       children: [body, gun],
       y_vel: 0,
       apply_gravity: false,
+      going_right: true,
       update: function(dt) {
-        this.children.forEach((child) => child.update(dt));
         if (keyPressed("arrowleft")) {
           this.x -= speed * dt;
+          this.going_right = false;
         }
         if (keyPressed("arrowright")) {
           this.x += speed * dt;
+          this.going_right = true;
         }
         if (keyPressed("space") && !this.apply_gravity) {
           this.y_vel = jumpForce;
@@ -749,15 +761,22 @@
           this.y += this.y_vel * dt;
         }
         let pointer = getPointer();
-        this.children[1].rotation = Math.atan2(
-          pointer.y - this.y,
-          pointer.x - this.x
-        );
-        this.children[1].rotation = clamp(
-          -Math.PI / 2,
-          Math.PI / 2,
-          this.children[1].rotation
-        );
+        let temp_rotation = Math.atan2(pointer.y - this.y, pointer.x - this.x);
+        if (this.going_right) {
+          this.children[1].rotation = clamp(
+            -Math.PI / 2,
+            Math.PI / 2,
+            temp_rotation
+          );
+        } else {
+          if (temp_rotation <= -Math.PI / 2 && temp_rotation >= -Math.PI || temp_rotation >= Math.PI / 2 && temp_rotation <= Math.PI) {
+            this.children[1].rotation = temp_rotation;
+          }
+        }
+        this.children.forEach((child) => {
+          child.update(dt);
+          child.flip_direction(this.going_right);
+        });
       },
       render: function() {
         this.children.forEach((child) => child.render());
