@@ -33,7 +33,7 @@ export default function Agent() {
   });
 
   return GameObject({
-    x: 0,
+    x: 100,
     y: 400,
     rotation: 0,
     width: body.width,

@@ -1,24 +1,74 @@
 import { Scene, Sprite } from "kontra";
 
+// var theCanvas = document.getElementById("game");
+// var context = theCanvas.getContext("2d");
+
+// console.log(context.width);
+// console.log(context.height);
+const borderWidth = 20;
 export default function MakeRoom() {
-  let ground1 = Sprite({
+  let leftBorder = Sprite({
     x: 0, // starting x,y position of the sprite
-    y: 760,
-    width: 800, // width and height of the sprite
-    height: 40,
+    y: 0,
+    width: borderWidth, // width and height of the sprite
+    height: 700,
+    color: "white",
+  });
+  
+  let rightBorder = Sprite({
+    x: 900 - borderWidth, // starting x,y position of the sprite
+    y: 0,
+    width: borderWidth, // width and height of the sprite
+    height: 700,
     color: "white",
   });
 
-  let ground2 = Sprite({
-    x: 400,
-    y: 650,
-    width: 400,
-    height: 40,
+  let bottomBorder = Sprite({
+    x: 0,
+    y: 700 - borderWidth,
+    width: 900,
+    height: borderWidth,
     color: "white",
   });
+
+  let topBorder = Sprite({
+    x: 0,
+    y: 0,
+    width: 900,
+    height: borderWidth,
+    color: "white",
+  });
+
+  let obstacle1 = Sprite({
+    x: 200,
+    y: 600,
+    width: 200,
+    height: 20,
+    color: "white",
+  });
+
+  
+
+  let obstacle2 = Sprite({
+    x: 500,
+    y: 400,
+    width: 200,
+    height: 20,
+    color: "white",
+  });
+
+  let obstacle3 = Sprite({
+    x: 200,
+    y: 200,
+    width: 200,
+    height: 20,
+    color: "white",
+  });
+
+
 
   return Scene({
     id: "room",
-    objects: [ground1, ground2],
+    objects: [leftBorder, bottomBorder, rightBorder, topBorder, obstacle1, obstacle2, obstacle3],
   });
 }
