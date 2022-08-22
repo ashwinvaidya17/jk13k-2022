@@ -1,13 +1,14 @@
 (() => {
   // node_modules/kontra/kontra.mjs
-  var noop = () => {
-  };
-  var srOnlyStyle = "position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);";
+  var noop = () => {};
+  var srOnlyStyle =
+    "position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);";
   function addToDom(node, canvas) {
     let container = canvas.parentNode;
     node.setAttribute("data-kontra", "");
     if (container) {
-      let target = container.querySelector("[data-kontra]:last-of-type") || canvas;
+      let target =
+        container.querySelector("[data-kontra]:last-of-type") || canvas;
       container.insertBefore(node, target.nextSibling);
     } else {
       document.body.appendChild(node);
@@ -32,10 +33,9 @@
   var context;
   var handler$1 = {
     get(target, key) {
-      if (key == "_proxy")
-        return true;
+      if (key == "_proxy") return true;
       return noop;
-    }
+    },
   };
   function getCanvas() {
     return canvasEl;
@@ -44,7 +44,10 @@
     return context;
   }
   function init$1(canvas, { contextless = false } = {}) {
-    canvasEl = document.getElementById(canvas) || canvas || document.querySelector("canvas");
+    canvasEl =
+      document.getElementById(canvas) ||
+      canvas ||
+      document.querySelector("canvas");
     if (contextless) {
       canvasEl = canvasEl || new Proxy({}, handler$1);
     }
@@ -58,7 +61,7 @@
     let cos = Math.cos(angle);
     return {
       x: point.x * cos - point.y * sin,
-      y: point.x * sin + point.y * cos
+      y: point.x * sin + point.y * cos,
     };
   }
   function clamp(min, max, value) {
@@ -66,7 +69,12 @@
   }
   function collides(obj1, obj2) {
     [obj1, obj2] = [obj1, obj2].map((obj) => getWorldRect(obj));
-    return obj1.x < obj2.x + obj2.width && obj1.x + obj1.width > obj2.x && obj1.y < obj2.y + obj2.height && obj1.y + obj1.height > obj2.y;
+    return (
+      obj1.x < obj2.x + obj2.width &&
+      obj1.x + obj1.width > obj2.x &&
+      obj1.y < obj2.y + obj2.height &&
+      obj1.y + obj1.height > obj2.y
+    );
   }
   function getWorldRect(obj) {
     let { x = 0, y = 0, width, height } = obj.world || obj;
@@ -82,7 +90,7 @@
       x,
       y,
       width,
-      height
+      height,
     };
   }
   var Vector = class {
@@ -131,8 +139,7 @@
     isAlive() {
       return this.ttl > 0;
     }
-    _pc() {
-    }
+    _pc() {}
   };
   var GameObject = class extends Updatable {
     init({
@@ -151,7 +158,7 @@
         context: context2,
         anchor,
         rotation,
-        ...props
+        ...props,
       });
       this._di = true;
       this._uw();
@@ -181,8 +188,7 @@
       }
       context2.restore();
     }
-    draw() {
-    }
+    draw() {}
     _pc() {
       this._uw();
     }
@@ -215,13 +221,8 @@
       this._pc();
     }
     _uw() {
-      if (!this._di)
-        return;
-      let {
-        _wx = 0,
-        _wy = 0,
-        _wr = 0
-      } = this.parent || {};
+      if (!this._di) return;
+      let { _wx = 0, _wy = 0, _wr = 0 } = this.parent || {};
       this._wx = this.x;
       this._wy = this.y;
       this._ww = this.width;
@@ -237,7 +238,7 @@
         y: this._wy,
         width: this._ww,
         height: this._wh,
-        rotation: this._wr
+        rotation: this._wr,
       };
     }
     get rotation() {
@@ -252,11 +253,9 @@
     return new GameObject(...arguments);
   }
   var Sprite = class extends GameObject {
-    init({
-      ...props
-    } = {}) {
+    init({ ...props } = {}) {
       super.init({
-        ...props
+        ...props,
       });
     }
     draw() {
@@ -275,7 +274,7 @@
   var pointerMap = {
     0: "left",
     1: "middle",
-    2: "right"
+    2: "right",
   };
   function getPointer(canvas = getCanvas()) {
     return pointers.get(canvas);
@@ -285,7 +284,7 @@
     do {
       x -= object.sx || 0;
       y -= object.sy || 0;
-    } while (object = object.parent);
+    } while ((object = object.parent));
     let dx = pointer.x - Math.max(x, Math.min(pointer.x, x + width));
     let dy = pointer.y - Math.max(y, Math.min(pointer.y, y + height));
     return dx * dx + dy * dy < pointer.radius * pointer.radius;
@@ -294,7 +293,9 @@
     let renderedObjects = pointer._lf.length ? pointer._lf : pointer._cf;
     for (let i = renderedObjects.length - 1; i >= 0; i--) {
       let object = renderedObjects[i];
-      let collides2 = object.collidesWithPointer ? object.collidesWithPointer(pointer) : circleRectCollision(object, pointer);
+      let collides2 = object.collidesWithPointer
+        ? object.collidesWithPointer(pointer)
+        : circleRectCollision(object, pointer);
       if (collides2) {
         return object;
       }
@@ -306,18 +307,39 @@
   function getCanvasOffset(pointer) {
     let { canvas, _s } = pointer;
     let rect = canvas.getBoundingClientRect();
-    let transform = _s.transform != "none" ? _s.transform.replace("matrix(", "").split(",") : [1, 1, 1, 1];
+    let transform =
+      _s.transform != "none"
+        ? _s.transform.replace("matrix(", "").split(",")
+        : [1, 1, 1, 1];
     let transformScaleX = parseFloat(transform[0]);
     let transformScaleY = parseFloat(transform[3]);
-    let borderWidth = (getPropValue(_s, "border-left-width") + getPropValue(_s, "border-right-width")) * transformScaleX;
-    let borderHeight = (getPropValue(_s, "border-top-width") + getPropValue(_s, "border-bottom-width")) * transformScaleY;
-    let paddingWidth = (getPropValue(_s, "padding-left") + getPropValue(_s, "padding-right")) * transformScaleX;
-    let paddingHeight = (getPropValue(_s, "padding-top") + getPropValue(_s, "padding-bottom")) * transformScaleY;
+    let borderWidth =
+      (getPropValue(_s, "border-left-width") +
+        getPropValue(_s, "border-right-width")) *
+      transformScaleX;
+    let borderHeight =
+      (getPropValue(_s, "border-top-width") +
+        getPropValue(_s, "border-bottom-width")) *
+      transformScaleY;
+    let paddingWidth =
+      (getPropValue(_s, "padding-left") + getPropValue(_s, "padding-right")) *
+      transformScaleX;
+    let paddingHeight =
+      (getPropValue(_s, "padding-top") + getPropValue(_s, "padding-bottom")) *
+      transformScaleY;
     return {
       scaleX: (rect.width - borderWidth - paddingWidth) / canvas.width,
       scaleY: (rect.height - borderHeight - paddingHeight) / canvas.height,
-      offsetX: rect.left + (getPropValue(_s, "border-left-width") + getPropValue(_s, "padding-left")) * transformScaleX,
-      offsetY: rect.top + (getPropValue(_s, "border-top-width") + getPropValue(_s, "padding-top")) * transformScaleY
+      offsetX:
+        rect.left +
+        (getPropValue(_s, "border-left-width") +
+          getPropValue(_s, "padding-left")) *
+          transformScaleX,
+      offsetY:
+        rect.top +
+        (getPropValue(_s, "border-top-width") +
+          getPropValue(_s, "padding-top")) *
+          transformScaleY,
     };
   }
   function pointerDownHandler(evt) {
@@ -360,48 +382,41 @@
     let { scaleX, scaleY, offsetX, offsetY } = getCanvasOffset(pointer);
     let isTouchEvent = evt.type.includes("touch");
     if (isTouchEvent) {
-      Array.from(evt.touches).map(
-        ({ clientX, clientY, identifier }) => {
-          let touch = pointer.touches[identifier];
-          if (!touch) {
-            touch = pointer.touches[identifier] = {
-              start: {
-                x: (clientX - offsetX) / scaleX,
-                y: (clientY - offsetY) / scaleY
-              }
-            };
-            pointer.touches.length++;
-          }
-          touch.changed = false;
+      Array.from(evt.touches).map(({ clientX, clientY, identifier }) => {
+        let touch = pointer.touches[identifier];
+        if (!touch) {
+          touch = pointer.touches[identifier] = {
+            start: {
+              x: (clientX - offsetX) / scaleX,
+              y: (clientY - offsetY) / scaleY,
+            },
+          };
+          pointer.touches.length++;
         }
-      );
-      Array.from(evt.changedTouches).map(
-        ({ clientX, clientY, identifier }) => {
-          let touch = pointer.touches[identifier];
-          touch.changed = true;
-          touch.x = pointer.x = (clientX - offsetX) / scaleX;
-          touch.y = pointer.y = (clientY - offsetY) / scaleY;
-          callCallback(pointer, eventName, evt);
-          emit("touchChanged", evt, pointer.touches);
-          if (eventName == "onUp") {
-            delete pointer.touches[identifier];
-            pointer.touches.length--;
-            if (!pointer.touches.length) {
-              emit("touchEnd");
-            }
+        touch.changed = false;
+      });
+      Array.from(evt.changedTouches).map(({ clientX, clientY, identifier }) => {
+        let touch = pointer.touches[identifier];
+        touch.changed = true;
+        touch.x = pointer.x = (clientX - offsetX) / scaleX;
+        touch.y = pointer.y = (clientY - offsetY) / scaleY;
+        callCallback(pointer, eventName, evt);
+        emit("touchChanged", evt, pointer.touches);
+        if (eventName == "onUp") {
+          delete pointer.touches[identifier];
+          pointer.touches.length--;
+          if (!pointer.touches.length) {
+            emit("touchEnd");
           }
         }
-      );
+      });
     } else {
       pointer.x = (evt.clientX - offsetX) / scaleX;
       pointer.y = (evt.clientY - offsetY) / scaleY;
       callCallback(pointer, eventName, evt);
     }
   }
-  function initPointer({
-    radius = 5,
-    canvas = getCanvas()
-  } = {}) {
+  function initPointer({ radius = 5, canvas = getCanvas() } = {}) {
     let pointer = pointers.get(canvas);
     if (!pointer) {
       let style = window.getComputedStyle(canvas);
@@ -415,7 +430,7 @@
         _lf: [],
         _o: [],
         _oo: null,
-        _s: style
+        _s: style,
       };
       pointers.set(canvas, pointer);
     }
@@ -449,7 +464,7 @@
     update = noop,
     render,
     context: context2 = getContext(),
-    blur = false
+    blur = false,
   } = {}) {
     let accumulator = 0;
     let delta = 1e3 / fps;
@@ -467,8 +482,7 @@
     }
     function frame() {
       rAF = requestAnimationFrame(frame);
-      if (!focused)
-        return;
+      if (!focused) return;
       now = performance.now();
       dt = now - last;
       last = now;
@@ -496,7 +510,7 @@
       stop() {
         this.isStopped = true;
         cancelAnimationFrame(rAF);
-      }
+      },
     };
     return loop2;
   }
@@ -510,7 +524,7 @@
     ArrowLeft: "arrowleft",
     ArrowUp: "arrowup",
     ArrowRight: "arrowright",
-    ArrowDown: "arrowdown"
+    ArrowDown: "arrowdown",
   };
   function call(callback = noop, evt) {
     if (callback._pd) {
@@ -536,9 +550,7 @@
   function initKeys() {
     let i;
     for (i = 0; i < 26; i++) {
-      keyMap["Key" + String.fromCharCode(i + 65)] = String.fromCharCode(
-        i + 97
-      );
+      keyMap["Key" + String.fromCharCode(i + 65)] = String.fromCharCode(i + 97);
     }
     for (i = 0; i < 10; i++) {
       keyMap["Digit" + i] = keyMap["Numpad" + i] = "" + i;
@@ -574,7 +586,7 @@
     }) {
       this._o = [];
       let canvas = context2.canvas;
-      let section = this._dn = document.createElement("section");
+      let section = (this._dn = document.createElement("section"));
       section.tabIndex = -1;
       section.style = srOnlyStyle;
       section.id = id;
@@ -587,7 +599,7 @@
         cullObjects,
         cullFunction,
         sortFunction,
-        ...props
+        ...props,
       });
       let { width, height } = canvas;
       let x = width / 2;
@@ -601,7 +613,7 @@
         centerX: x,
         centerY: y,
         anchor: { x: 0.5, y: 0.5 },
-        render: this._rf.bind(this)
+        render: this._rf.bind(this),
       });
       this.add(objects);
     }
@@ -665,14 +677,12 @@
         camera,
         sortFunction,
         cullObjects,
-        cullFunction
+        cullFunction,
       } = this;
       context2.translate(_sx, _sy);
       let objects = _o;
       if (cullObjects) {
-        objects = objects.filter(
-          (object) => cullFunction(camera, object)
-        );
+        objects = objects.filter((object) => cullFunction(camera, object));
       }
       if (sortFunction) {
         objects.sort(sortFunction);
@@ -691,10 +701,8 @@
         context2.restore();
       }
     }
-    onShow() {
-    }
-    onHide() {
-    }
+    onShow() {}
+    onHide() {}
   };
   function factory$2() {
     return new Scene(...arguments);
@@ -715,16 +723,25 @@
       y: 0,
       width: 20,
       height: 40,
-      color: "white"
+      color: "white",
+      flip_direction: function () {},
     });
     let gun = factory$8({
-      x: body.width + 10,
+      x: body.width,
       y: 3,
-      width: 20,
+      width: 30,
       height: 5,
       color: "white",
       rotation: 0,
-      anchor: { x: 0, y: this.y }
+      anchor: { x: 0, y: 0 },
+      flip_direction: function (right) {
+        if (right) {
+          this.x = body.width;
+        } else {
+          this.x = 0;
+        }
+        console.log(this.x, this.y, this.width, this.height);
+      },
     });
     return factory$9({
       x: 0,
@@ -735,13 +752,15 @@
       children: [body, gun],
       y_vel: 0,
       apply_gravity: false,
-      update: function(dt) {
-        this.children.forEach((child) => child.update(dt));
+      going_right: true,
+      update: function (dt) {
         if (keyPressed("arrowleft")) {
           this.x -= AGENTSPEED * dt;
+          this.going_right = false;
         }
         if (keyPressed("arrowright")) {
           this.x += AGENTSPEED * dt;
+          this.going_right = true;
         }
         if (keyPressed("space") && !this.apply_gravity) {
           this.y_vel = JUMPFORCE;
@@ -751,19 +770,29 @@
           this.y += this.y_vel * dt;
         }
         let pointer = getPointer();
-        this.children[1].rotation = Math.atan2(
-          pointer.y - this.y,
-          pointer.x - this.x
-        );
-        this.children[1].rotation = clamp(
-          -Math.PI / 2,
-          Math.PI / 2,
-          this.children[1].rotation
-        );
+        let temp_rotation = Math.atan2(pointer.y - this.y, pointer.x - this.x);
+        if (this.going_right) {
+          this.children[1].rotation = clamp(
+            -Math.PI / 2,
+            Math.PI / 2,
+            temp_rotation
+          );
+        } else {
+          if (
+            (temp_rotation <= -Math.PI / 2 && temp_rotation >= -Math.PI) ||
+            (temp_rotation >= Math.PI / 2 && temp_rotation <= Math.PI)
+          ) {
+            this.children[1].rotation = temp_rotation;
+          }
+        }
+        this.children.forEach((child) => {
+          child.update(dt);
+          child.flip_direction(this.going_right);
+        });
       },
-      render: function() {
+      render: function () {
         this.children.forEach((child) => child.render());
-      }
+      },
     });
   }
 
@@ -778,7 +807,7 @@
       [1, 1],
       [1, -1],
       [-1, 1],
-      [-1, -1]
+      [-1, -1],
     ];
     function _fillObstacles(obstacles2, room2) {
       for (let obstacle of obstacles2) {
@@ -824,7 +853,7 @@
       agent: agent2,
       timeCounter: 0,
       trajectory: [],
-      update: function(dt) {
+      update: function (dt) {
         this.timeCounter += dt;
         if (this.timeCounter > 2) {
           this.trajectory = this._aStar();
@@ -847,16 +876,16 @@
           this.trajectory = this._aStar();
         }
       },
-      _aStar: function() {
+      _aStar: function () {
         let goal = [
           Math.floor(this.agent.x / ENEMYDIM),
-          Math.floor(this.agent.y / ENEMYDIM)
+          Math.floor(this.agent.y / ENEMYDIM),
         ];
         let start = {
           x: Math.floor(this.x / ENEMYDIM),
           y: Math.floor(this.y / ENEMYDIM),
           h: 1,
-          parent: null
+          parent: null,
         };
         let open = [start];
         let closed = [];
@@ -878,20 +907,29 @@
             let next = {
               x: current.x + directions[i][0],
               y: current.y + directions[i][1],
-              h: 0
+              h: 0,
             };
-            if (next.x < 0 || next.x >= this.room[0].length || next.y < 0 || next.y >= this.room.length || this.room[next.y][next.x] === 1) {
+            if (
+              next.x < 0 ||
+              next.x >= this.room[0].length ||
+              next.y < 0 ||
+              next.y >= this.room.length ||
+              this.room[next.y][next.x] === 1
+            ) {
               continue;
             }
-            let distance = Math.abs(goal[0] - next.x) + Math.abs(goal[1] - next.y);
+            let distance =
+              Math.abs(goal[0] - next.x) + Math.abs(goal[1] - next.y);
             if (!open.find((x) => x.x === next.x && x.y === next.y)) {
               open.push({
                 x: next.x,
                 y: next.y,
                 h: 1 + current.h + distance,
-                parent: current
+                parent: current,
               });
-              let neighbor = closed.find((x) => x.x === next.x && x.y === next.y);
+              let neighbor = closed.find(
+                (x) => x.x === next.x && x.y === next.y
+              );
               if (neighbor) {
                 if (current.h + distance < neighbor.h) {
                   neighbor.h = current.h + distance;
@@ -902,7 +940,7 @@
           }
         }
         return false;
-      }
+      },
     });
   }
 
@@ -913,18 +951,18 @@
       y: 760,
       width: 800,
       height: 40,
-      color: "white"
+      color: "white",
     });
     let ground2 = factory$8({
       x: 400,
       y: 650,
       width: 400,
       height: 40,
-      color: "white"
+      color: "white",
     });
     return factory$2({
       id: "room",
-      objects: [ground1, ground2]
+      objects: [ground1, ground2],
     });
   }
 
@@ -935,7 +973,7 @@
   var room = MakeRoom();
   var enemy = Enemy(agent, room.objects);
   var loop = GameLoop({
-    update: function(dt) {
+    update: function (dt) {
       room.update();
       agent.update(dt);
       enemy.update(dt);
@@ -952,11 +990,11 @@
         agent.apply_gravity = true;
       }
     },
-    render: function() {
+    render: function () {
       room.render();
       agent.render();
       enemy.render();
-    }
+    },
   });
   loop.start();
 })();
