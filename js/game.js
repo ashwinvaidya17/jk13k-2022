@@ -1,5 +1,6 @@
 import { collides, GameLoop, init, initPointer } from "kontra";
 import Agent from "./agent";
+import Enemy from "./enemy";
 import MakeRoom from "./temp_room";
 
 init();
@@ -7,6 +8,7 @@ initPointer();
 
 let agent = Agent();
 let room = MakeRoom();
+let enemy = Enemy(agent, room.objects);
 
 let loop = GameLoop({
   // create the main game loop
@@ -15,6 +17,7 @@ let loop = GameLoop({
     // update the game state
     room.update();
     agent.update(dt);
+    enemy.update(dt);
 
     let collision = false;
 
@@ -34,6 +37,7 @@ let loop = GameLoop({
     // render the game state
     room.render();
     agent.render();
+    enemy.render();
   },
 });
 

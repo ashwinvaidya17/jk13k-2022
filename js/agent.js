@@ -6,12 +6,9 @@ import {
   keyPressed,
   Sprite,
 } from "kontra";
-import { gravity } from "./constants";
+import { AGENTSPEED, GRAVITY, JUMPFORCE } from "./constants";
 
 initKeys();
-
-const speed = 200;
-const jumpForce = -250;
 
 export default function Agent() {
   let body = Sprite({
@@ -57,19 +54,19 @@ export default function Agent() {
     going_right: true, // store direction to flip the sprite
     update: function (dt) {
       if (keyPressed("arrowleft")) {
-        this.x -= speed * dt;
+        this.x -= AGENTSPEED * dt;
         this.going_right = false;
       }
       if (keyPressed("arrowright")) {
-        this.x += speed * dt;
+        this.x += AGENTSPEED * dt;
         this.going_right = true;
       }
       if (keyPressed("space") && !this.apply_gravity) {
-        this.y_vel = jumpForce;
+        this.y_vel = JUMPFORCE;
       }
       // Gravity
       if (this.apply_gravity) {
-        this.y_vel += gravity * dt;
+        this.y_vel += GRAVITY * dt;
         this.y += this.y_vel * dt;
       }
 
