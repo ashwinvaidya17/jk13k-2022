@@ -18,8 +18,8 @@ export default function Enemy(agent, obstacles) {
       // Find places where obstacles cover the grid
       let x = Math.floor(obstacle.x / ENEMYDIM);
       let y = Math.floor(obstacle.y / ENEMYDIM);
-      let w = Math.ceil(obstacle.width / ENEMYDIM);
-      let h = Math.ceil(obstacle.height / ENEMYDIM);
+      let w = Math.floor(obstacle.width / ENEMYDIM);
+      let h = Math.floor(obstacle.height / ENEMYDIM);
       for (let i = x; i < x + w; i++) {
         for (let j = y; j < y + h; j++) {
           room[j][i] = 1;
@@ -126,6 +126,7 @@ export default function Enemy(agent, obstacles) {
           ) {
             continue;
           }
+          // jshint ignore:start
           let distance =
             Math.abs(goal[0] - next.x) + Math.abs(goal[1] - next.y);
           if (!open.find((x) => x.x === next.x && x.y === next.y)) {
@@ -143,6 +144,7 @@ export default function Enemy(agent, obstacles) {
               }
             }
           }
+          // jshint ignore:end
         }
       }
       return false;

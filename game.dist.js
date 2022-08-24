@@ -309,12 +309,12 @@
     let transform = _s.transform != "none" ? _s.transform.replace("matrix(", "").split(",") : [1, 1, 1, 1];
     let transformScaleX = parseFloat(transform[0]);
     let transformScaleY = parseFloat(transform[3]);
-    let borderWidth = (getPropValue(_s, "border-left-width") + getPropValue(_s, "border-right-width")) * transformScaleX;
+    let borderWidth2 = (getPropValue(_s, "border-left-width") + getPropValue(_s, "border-right-width")) * transformScaleX;
     let borderHeight = (getPropValue(_s, "border-top-width") + getPropValue(_s, "border-bottom-width")) * transformScaleY;
     let paddingWidth = (getPropValue(_s, "padding-left") + getPropValue(_s, "padding-right")) * transformScaleX;
     let paddingHeight = (getPropValue(_s, "padding-top") + getPropValue(_s, "padding-bottom")) * transformScaleY;
     return {
-      scaleX: (rect.width - borderWidth - paddingWidth) / canvas.width,
+      scaleX: (rect.width - borderWidth2 - paddingWidth) / canvas.width,
       scaleY: (rect.height - borderHeight - paddingHeight) / canvas.height,
       offsetX: rect.left + (getPropValue(_s, "border-left-width") + getPropValue(_s, "padding-left")) * transformScaleX,
       offsetY: rect.top + (getPropValue(_s, "border-top-width") + getPropValue(_s, "padding-top")) * transformScaleY
@@ -438,6 +438,9 @@
       });
     }
     return pointer;
+  }
+  function pointerPressed(button) {
+    return !!pressedButtons[button];
   }
   function clear(context2) {
     let canvas = context2.canvas;
@@ -700,12 +703,28 @@
     return new Scene(...arguments);
   }
 
+  // js/bullet.js
+  function Bullet(x, y, dx, dy) {
+    return factory$8({
+      x,
+      y,
+      width: 10,
+      height: 10,
+      color: "red",
+      dx,
+      dy,
+      hitCount: 0
+    });
+  }
+
   // js/constants.js
   var GRAVITY = 200;
   var AGENTSPEED = 200;
   var JUMPFORCE = -250;
   var ENEMYSPEED = 100;
   var ENEMYDIM = 40;
+  var BULLETVELOCITY = 10;
+  var MAXHITCOUNT = 3;
 
   // js/agent.js
   initKeys();
@@ -730,14 +749,15 @@
       flip_direction: function(right) {
         if (right) {
           this.x = body.width;
+          this.y = 3;
         } else {
           this.x = 0;
+          this.y = 8;
         }
-        console.log(this.x, this.y, this.width, this.height);
       }
     });
     return factory$9({
-      x: 0,
+      x: 100,
       y: 400,
       rotation: 0,
       width: body.width,
@@ -746,12 +766,14 @@
       y_vel: 0,
       apply_gravity: false,
       going_right: true,
+      lmb_pressed: false,
+      bullets_list: [],
       update: function(dt) {
-        if (keyPressed("arrowleft")) {
+        if (keyPressed("a") || keyPressed("arrowleft")) {
           this.x -= AGENTSPEED * dt;
           this.going_right = false;
         }
-        if (keyPressed("arrowright")) {
+        if (keyPressed("d") || keyPressed("arrowright")) {
           this.x += AGENTSPEED * dt;
           this.going_right = true;
         }
@@ -775,13 +797,32 @@
             this.children[1].rotation = temp_rotation;
           }
         }
+        if (pointerPressed("left")) {
+          if (!this.lmb_pressed) {
+            this.lmb_pressed = true;
+            let vx = Math.cos(this.children[1].rotation) * BULLETVELOCITY;
+            let vy = Math.sin(this.children[1].rotation) * BULLETVELOCITY;
+            let posX = this.children[1].x + Math.cos(this.children[1].rotation) * this.children[1].width;
+            let posY = this.children[1].y + this.children[1].height / 2 + Math.sin(this.children[1].rotation) * this.children[1].width;
+            this.bullets_list.push(Bullet(posX, posY, vx, vy));
+          }
+        } else {
+          this.lmb_pressed = false;
+        }
         this.children.forEach((child) => {
           child.update(dt);
           child.flip_direction(this.going_right);
         });
+        this.bullets_list = this.bullets_list.filter(
+          (bullet) => bullet.hitCount <= MAXHITCOUNT
+        );
+        this.bullets_list.forEach((bullet) => {
+          bullet.update(dt);
+        });
       },
       render: function() {
         this.children.forEach((child) => child.render());
+        this.bullets_list.forEach((bullet) => bullet.render());
       }
     });
   }
@@ -803,8 +844,8 @@
       for (let obstacle of obstacles2) {
         let x = Math.floor(obstacle.x / ENEMYDIM);
         let y = Math.floor(obstacle.y / ENEMYDIM);
-        let w = Math.ceil(obstacle.width / ENEMYDIM);
-        let h = Math.ceil(obstacle.height / ENEMYDIM);
+        let w = Math.floor(obstacle.width / ENEMYDIM);
+        let h = Math.floor(obstacle.height / ENEMYDIM);
         for (let i = x; i < x + w; i++) {
           for (let j = y; j < y + h; j++) {
             room2[j][i] = 1;
@@ -926,24 +967,60 @@
   }
 
   // js/temp_room.js
+  var borderWidth = 20;
   function MakeRoom() {
-    let ground1 = factory$8({
+    let leftBorder = factory$8({
       x: 0,
-      y: 760,
-      width: 800,
-      height: 40,
+      y: 0,
+      width: borderWidth,
+      height: 700,
       color: "white"
     });
-    let ground2 = factory$8({
-      x: 400,
-      y: 650,
-      width: 400,
-      height: 40,
+    let rightBorder = factory$8({
+      x: 900 - borderWidth,
+      y: 0,
+      width: borderWidth,
+      height: 700,
+      color: "white"
+    });
+    let bottomBorder = factory$8({
+      x: 0,
+      y: 700 - borderWidth,
+      width: 900,
+      height: borderWidth,
+      color: "white"
+    });
+    let topBorder = factory$8({
+      x: 0,
+      y: 0,
+      width: 900,
+      height: borderWidth,
+      color: "white"
+    });
+    let obstacle1 = factory$8({
+      x: 200,
+      y: 600,
+      width: 200,
+      height: 20,
+      color: "white"
+    });
+    let obstacle2 = factory$8({
+      x: 500,
+      y: 400,
+      width: 200,
+      height: 20,
+      color: "white"
+    });
+    let obstacle3 = factory$8({
+      x: 200,
+      y: 200,
+      width: 200,
+      height: 20,
       color: "white"
     });
     return factory$2({
       id: "room",
-      objects: [ground1, ground2]
+      objects: [leftBorder, bottomBorder, rightBorder, topBorder, obstacle1, obstacle2, obstacle3]
     });
   }
 
