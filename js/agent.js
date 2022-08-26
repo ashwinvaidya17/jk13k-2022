@@ -33,12 +33,13 @@ export default function Agent() {
     flip_direction: function (right) {
       if (right) {
         this.x = body.width;
+        this.y = 3;
         // TODO change direction of sprite
       } else {
         this.x = 0;
+        this.y = 8;
         // TODO change direction of sprite
       }
-      console.log(this.x, this.y, this.width, this.height);
     },
   });
 
@@ -53,11 +54,11 @@ export default function Agent() {
     apply_gravity: false,
     going_right: true, // store direction to flip the sprite
     update: function (dt) {
-      if (keyPressed("arrowleft")) {
+      if (keyPressed("a") || keyPressed("arrowleft")) {
         this.x -= AGENTSPEED * dt;
         this.going_right = false;
       }
-      if (keyPressed("arrowright")) {
+      if (keyPressed("d") || keyPressed("arrowright")) {
         this.x += AGENTSPEED * dt;
         this.going_right = true;
       }

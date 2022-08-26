@@ -1,10 +1,5 @@
 import { Scene, Sprite } from "kontra";
 
-// var theCanvas = document.getElementById("game");
-// var context = theCanvas.getContext("2d");
-
-// console.log(context.width);
-// console.log(context.height);
 const borderWidth = 20;
 export default function MakeRoom() {
   let leftBorder = Sprite({
@@ -14,7 +9,7 @@ export default function MakeRoom() {
     height: 700,
     color: "white",
   });
-  
+
   let rightBorder = Sprite({
     x: 900 - borderWidth, // starting x,y position of the sprite
     y: 0,
@@ -47,8 +42,6 @@ export default function MakeRoom() {
     color: "white",
   });
 
-  
-
   let obstacle2 = Sprite({
     x: 500,
     y: 400,
@@ -65,10 +58,16 @@ export default function MakeRoom() {
     color: "white",
   });
 
-
-
   return Scene({
     id: "room",
-    objects: [leftBorder, bottomBorder, rightBorder, topBorder, obstacle1, obstacle2, obstacle3],
+    objects: [
+      leftBorder,
+      bottomBorder,
+      rightBorder,
+      topBorder,
+      obstacle1,
+      obstacle2,
+      obstacle3,
+    ],
   });
 }
