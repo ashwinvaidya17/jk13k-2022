@@ -26,13 +26,25 @@ let loop = GameLoop({
     enemy.update(dt);
 
     let collision = false;
-
-    for (let obj of room.objects) {
+    
+        for (let obj of room.objects) {
       if (collides(agent, obj)) {
-        agent.y = obj.y - agent.height;
-        agent.y_vel = 0;
-        agent.apply_gravity = false;
-        collision = true;
+        switch(obj){
+          case room.objects[0] : 
+            agent.x = 20
+            break;
+          case room.objects[2]:
+            agent.x = 860   
+            break; 
+          case room.objects[3]:
+            agent.y = 20   
+            break;    
+          default:   
+            agent.y = obj.y - agent.height;
+            agent.y_vel = 0;
+            agent.apply_gravity = false;
+            collision = true;
+        }
       }
       for (let bullets of bulletList) {
         if (collides(bullets, obj)) {
