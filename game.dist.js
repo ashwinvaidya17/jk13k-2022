@@ -703,20 +703,6 @@
     return new Scene(...arguments);
   }
 
-  // js/bullet.js
-  function Bullet(x, y, dx, dy) {
-    return factory$8({
-      x,
-      y,
-      width: 10,
-      height: 10,
-      color: "red",
-      dx,
-      dy,
-      hitCount: 0
-    });
-  }
-
   // js/constants.js
   var GRAVITY = 200;
   var AGENTSPEED = 200;
@@ -766,8 +752,6 @@
       y_vel: 0,
       apply_gravity: false,
       going_right: true,
-      lmb_pressed: false,
-      bullets_list: [],
       update: function(dt) {
         if (keyPressed("a") || keyPressed("arrowleft")) {
           this.x -= AGENTSPEED * dt;
@@ -797,33 +781,28 @@
             this.children[1].rotation = temp_rotation;
           }
         }
-        if (pointerPressed("left")) {
-          if (!this.lmb_pressed) {
-            this.lmb_pressed = true;
-            let vx = Math.cos(this.children[1].rotation) * BULLETVELOCITY;
-            let vy = Math.sin(this.children[1].rotation) * BULLETVELOCITY;
-            let posX = this.children[1].x + Math.cos(this.children[1].rotation) * this.children[1].width;
-            let posY = this.children[1].y + this.children[1].height / 2 + Math.sin(this.children[1].rotation) * this.children[1].width;
-            this.bullets_list.push(Bullet(posX, posY, vx, vy));
-          }
-        } else {
-          this.lmb_pressed = false;
-        }
         this.children.forEach((child) => {
           child.update(dt);
           child.flip_direction(this.going_right);
         });
-        this.bullets_list = this.bullets_list.filter(
-          (bullet) => bullet.hitCount <= MAXHITCOUNT
-        );
-        this.bullets_list.forEach((bullet) => {
-          bullet.update(dt);
-        });
       },
       render: function() {
         this.children.forEach((child) => child.render());
-        this.bullets_list.forEach((bullet) => bullet.render());
       }
+    });
+  }
+
+  // js/bullet.js
+  function Bullet(x, y, dx, dy) {
+    return factory$8({
+      x,
+      y,
+      width: 10,
+      height: 10,
+      color: "red",
+      dx,
+      dy,
+      hitCount: 0
     });
   }
 
@@ -966,7 +945,7 @@
     });
   }
 
-  // js/temp_room.js
+  // js/room.js
   var borderWidth = 20;
   function MakeRoom() {
     let leftBorder = factory$8({
@@ -1020,16 +999,26 @@
     });
     return factory$2({
       id: "room",
-      objects: [leftBorder, bottomBorder, rightBorder, topBorder, obstacle1, obstacle2, obstacle3]
+      objects: [
+        leftBorder,
+        bottomBorder,
+        rightBorder,
+        topBorder,
+        obstacle1,
+        obstacle2,
+        obstacle3
+      ]
     });
   }
 
   // js/game.js
   init$1();
   initPointer();
-  var agent = Agent();
   var room = MakeRoom();
+  var agent = Agent();
   var enemy = Enemy(agent, room.objects);
+  var bulletList = [];
+  var lmbPressed = false;
   var loop = GameLoop({
     update: function(dt) {
       room.update();
@@ -1043,15 +1032,45 @@
           agent.apply_gravity = false;
           collision = true;
         }
+        for (let bullets of bulletList) {
+          if (collides(bullets, obj)) {
+            bullets.hitCount++;
+            if (bullets.x + bullets.width > obj.x && bullets.x < obj.x || bullets.x < obj.x + obj.width && bullets.x + bullets.width > obj.x + obj.width) {
+              bullets.dx = -bullets.dx;
+            }
+            if (bullets.y + bullets.height > obj.y && bullets.y < obj.y || bullets.y < obj.y + obj.height && bullets.y + bullets.height > obj.y + obj.height) {
+              bullets.dy = -bullets.dy;
+            }
+          }
+        }
       }
       if (!collision) {
         agent.apply_gravity = true;
       }
+      if (pointerPressed("left")) {
+        if (!lmbPressed) {
+          lmbPressed = true;
+          let vx = Math.cos(agent.children[1].rotation) * BULLETVELOCITY;
+          let vy = Math.sin(agent.children[1].rotation) * BULLETVELOCITY;
+          let posX = agent.x + Math.cos(agent.children[1].rotation) * agent.children[1].width;
+          let posY = agent.y + agent.children[1].height / 2 + Math.sin(agent.children[1].rotation) * agent.children[1].width;
+          bulletList.push(Bullet(posX, posY, vx, vy));
+        }
+      } else {
+        lmbPressed = false;
+      }
+      bulletList = bulletList.filter((bullet) => bullet.hitCount <= MAXHITCOUNT);
+      bulletList.forEach((bullet) => {
+        bullet.update(dt);
+      });
     },
     render: function() {
       room.render();
       agent.render();
       enemy.render();
+      bulletList.forEach((bullet) => {
+        bullet.render();
+      });
     }
   });
   loop.start();
