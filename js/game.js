@@ -52,6 +52,10 @@ let loop = GameLoop({
             bullets.dy = -bullets.dy;
           }
         }
+        if(collides(bullets,enemy)){
+          enemy.color="red"
+          loop.stop()
+        }
       }
     }
     if (!collision) {
