@@ -807,7 +807,7 @@
   }
 
   // js/enemy.js
-  function Enemy(agent2, obstacles) {
+  function Enemy(agent, obstacles) {
     let canvas = getCanvas();
     let directions = [
       [0, 1],
@@ -819,7 +819,7 @@
       [-1, 1],
       [-1, -1]
     ];
-    function _fillObstacles(obstacles2, room2) {
+    function _fillObstacles(obstacles2, room) {
       for (let obstacle of obstacles2) {
         let x = Math.floor(obstacle.x / ENEMYDIM);
         let y = Math.floor(obstacle.y / ENEMYDIM);
@@ -827,20 +827,20 @@
         let h = Math.floor(obstacle.height / ENEMYDIM);
         for (let i = x; i < x + w; i++) {
           for (let j = y; j < y + h; j++) {
-            room2[j][i] = 1;
+            room[j][i] = 1;
           }
         }
       }
-      return room2;
+      return room;
     }
     function _discretizeRoom(obstacles2) {
       let nRows = Math.floor(canvas.height / ENEMYDIM);
       let nCols = Math.floor(canvas.width / ENEMYDIM);
-      let room2 = [];
+      let room = [];
       for (let i = 0; i < nRows; i++) {
-        room2.push(new Array(nCols).fill(0));
+        room.push(new Array(nCols).fill(0));
       }
-      return _fillObstacles(obstacles2, room2);
+      return _fillObstacles(obstacles2, room);
     }
     function findMin(open) {
       let min = open[0];
@@ -860,7 +860,7 @@
       height: ENEMYDIM,
       color: "green",
       room: _discretizeRoom(obstacles),
-      agent: agent2,
+      agent,
       timeCounter: 0,
       trajectory: [],
       update: function(dt) {
@@ -945,6 +945,81 @@
     });
   }
 
+  // js/replayObject.js
+  var ReplayObject = class {
+    constructor(sprite, wallTime) {
+      this.sprite = sprite;
+      this.locationHistory = [];
+      this.startTime = wallTime;
+      this.shouldRender = false;
+    }
+    save(dt) {
+      if (this.sprite.children == void 0) {
+        this.locationHistory.push({
+          x: this.sprite.x,
+          y: this.sprite.y,
+          rotation: this.sprite.rotation
+        });
+      } else {
+        let data = [];
+        for (let child of this.sprite.children) {
+          data.push({
+            x: this.sprite.x + child.x,
+            y: this.sprite.y + child.y,
+            rotation: this.sprite.rotation + child.rotation
+          });
+        }
+        this.locationHistory.push(data);
+      }
+    }
+    update(time) {
+      if (time >= this.startTime && time - this.startTime < this.locationHistory.length) {
+        this.shouldRender = true;
+        if (this.sprite.children == void 0) {
+          this.sprite.x = this.locationHistory[time - this.startTime].x;
+          this.sprite.y = this.locationHistory[time - this.startTime].y;
+          this.sprite.rotation = this.locationHistory[time - this.startTime].rotation;
+        } else {
+          for (let i = 0; i < this.sprite.children.length; i++) {
+            this.sprite.children[i].x = this.locationHistory[time - this.startTime][i].x;
+            this.sprite.children[i].y = this.locationHistory[time - this.startTime][i].y;
+            this.sprite.children[i].rotation = this.locationHistory[time - this.startTime][i].rotation;
+          }
+        }
+      } else {
+        this.shouldRender = false;
+      }
+    }
+  };
+
+  // js/replayManager.js
+  var ReplayManager = class {
+    constructor() {
+      this.watchList = [];
+      this.replayList = [];
+      this.bulletsWatchList = [];
+      this.wallCounter = 0;
+      this.counter = 0;
+    }
+    watch(object) {
+      this.watchList.push(new ReplayObject(object, this.wallCounter));
+    }
+    endEpisode() {
+      this.replayList = this.replayList.concat(this.watchList).slice();
+      this.watchList = [];
+      this.wallCounter = 0;
+    }
+    update(dt) {
+      this.watchList.forEach((object) => {
+        object.save(this.wallCounter);
+      });
+      this.replayList.forEach((object) => {
+        object.update(this.wallCounter);
+      });
+      this.wallCounter += 1;
+    }
+  };
+
   // js/room.js
   var borderWidth = 20;
   function MakeRoom() {
@@ -1014,64 +1089,102 @@
   // js/game.js
   init$1();
   initPointer();
-  var room = MakeRoom();
-  var agent = Agent();
-  var enemy = Enemy(agent, room.objects);
-  var bulletList = [];
-  var lmbPressed = false;
-  var loop = GameLoop({
-    update: function(dt) {
-      room.update();
-      agent.update(dt);
-      enemy.update(dt);
-      let collision = false;
-      for (let obj of room.objects) {
-        if (collides(agent, obj)) {
-          agent.y = obj.y - agent.height;
-          agent.y_vel = 0;
-          agent.apply_gravity = false;
-          collision = true;
-        }
-        for (let bullets of bulletList) {
-          if (collides(bullets, obj)) {
-            bullets.hitCount++;
-            if (bullets.x + bullets.width > obj.x && bullets.x < obj.x || bullets.x < obj.x + obj.width && bullets.x + bullets.width > obj.x + obj.width) {
-              bullets.dx = -bullets.dx;
+  function createLoop() {
+    let room = MakeRoom();
+    let agent = Agent();
+    let enemy = Enemy(agent, room.objects);
+    bulletList = [];
+    lmbPressed = false;
+    replayManager = new ReplayManager();
+    replayManager.watch(agent);
+    replayManager.watch(enemy);
+    function resetEpisode() {
+      room = MakeRoom();
+      agent = Agent();
+      enemy = Enemy(agent, room.objects);
+      bulletList = [];
+      lmbPressed = false;
+      replayManager.watch(agent);
+      replayManager.watch(enemy);
+    }
+    return GameLoop({
+      update: function(dt) {
+        room.update();
+        agent.update(dt);
+        enemy.update(dt);
+        replayManager.update(dt);
+        let collision = false;
+        for (let obj of room.objects) {
+          if (collides(agent, obj)) {
+            agent.y = obj.y - agent.height;
+            agent.y_vel = 0;
+            agent.apply_gravity = false;
+            collision = true;
+          }
+          for (let bullets of bulletList) {
+            if (collides(bullets, obj)) {
+              bullets.hitCount++;
+              if (bullets.x + bullets.width > obj.x && bullets.x < obj.x || bullets.x < obj.x + obj.width && bullets.x + bullets.width > obj.x + obj.width) {
+                bullets.dx = -bullets.dx;
+              }
+              if (bullets.y + bullets.height > obj.y && bullets.y < obj.y || bullets.y < obj.y + obj.height && bullets.y + bullets.height > obj.y + obj.height) {
+                bullets.dy = -bullets.dy;
+              }
             }
-            if (bullets.y + bullets.height > obj.y && bullets.y < obj.y || bullets.y < obj.y + obj.height && bullets.y + bullets.height > obj.y + obj.height) {
-              bullets.dy = -bullets.dy;
+          }
+        }
+        for (let bullet of bulletList) {
+          if (collides(bullet, enemy)) {
+            replayManager.endEpisode();
+            resetEpisode();
+            return;
+          }
+        }
+        if (!collision) {
+          agent.apply_gravity = true;
+        }
+        if (pointerPressed("left")) {
+          if (!lmbPressed) {
+            lmbPressed = true;
+            let vx = Math.cos(agent.children[1].rotation) * BULLETVELOCITY;
+            let vy = Math.sin(agent.children[1].rotation) * BULLETVELOCITY;
+            let posX = agent.x + Math.cos(agent.children[1].rotation) * agent.children[1].width;
+            let posY = agent.y + agent.children[1].height / 2 + Math.sin(agent.children[1].rotation) * agent.children[1].width;
+            let bullet = Bullet(posX, posY, vx, vy);
+            bulletList.push(bullet);
+            replayManager.watch(bullet);
+          }
+        } else {
+          lmbPressed = false;
+        }
+        bulletList = bulletList.filter(
+          (bullet) => bullet.hitCount <= MAXHITCOUNT
+        );
+        bulletList.forEach((bullet) => {
+          bullet.update(dt);
+        });
+      },
+      render() {
+        room.render();
+        agent.render();
+        enemy.render();
+        bulletList.forEach((bullet) => {
+          bullet.render();
+        });
+        for (let object of replayManager.replayList) {
+          if (object.shouldRender == true) {
+            if (object.sprite.children == void 0) {
+              object.sprite.render();
+            } else {
+              for (let child of object.sprite.children) {
+                child.render();
+              }
             }
           }
         }
       }
-      if (!collision) {
-        agent.apply_gravity = true;
-      }
-      if (pointerPressed("left")) {
-        if (!lmbPressed) {
-          lmbPressed = true;
-          let vx = Math.cos(agent.children[1].rotation) * BULLETVELOCITY;
-          let vy = Math.sin(agent.children[1].rotation) * BULLETVELOCITY;
-          let posX = agent.x + Math.cos(agent.children[1].rotation) * agent.children[1].width;
-          let posY = agent.y + agent.children[1].height / 2 + Math.sin(agent.children[1].rotation) * agent.children[1].width;
-          bulletList.push(Bullet(posX, posY, vx, vy));
-        }
-      } else {
-        lmbPressed = false;
-      }
-      bulletList = bulletList.filter((bullet) => bullet.hitCount <= MAXHITCOUNT);
-      bulletList.forEach((bullet) => {
-        bullet.update(dt);
-      });
-    },
-    render: function() {
-      room.render();
-      agent.render();
-      enemy.render();
-      bulletList.forEach((bullet) => {
-        bullet.render();
-      });
-    }
-  });
+    });
+  }
+  var loop = createLoop();
   loop.start();
 })();
