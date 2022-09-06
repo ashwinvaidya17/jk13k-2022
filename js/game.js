@@ -11,20 +11,24 @@ initPointer();
 
 function createLoop() {
   let room = MakeRoom();
+  let replayManager = new ReplayManager();
   let agent = Agent();
-  let enemy = Enemy(agent, room.objects);
+  var agents = replayManager.getAgents();
+  agents.push(agent);
+  let enemy = Enemy(agents, room.objects);
   let bulletList = []; // list of bullets
   // store if left mouse button is pressed. This is needed so that bullet is not fired during the frames the button
   // is kept pressed.
   let lmbPressed = false;
-  let replayManager = new ReplayManager();
   replayManager.watch(agent);
   replayManager.watch(enemy);
 
   function resetEpisode() {
     room = MakeRoom();
     agent = Agent();
-    enemy = Enemy(agent, room.objects);
+    agents = replayManager.getAgents();
+    agents.push(agent);
+    enemy = Enemy(agents, room.objects);
     bulletList = []; // list of bullets
     lmbPressed = false;
     replayManager.watch(agent);

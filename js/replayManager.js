@@ -12,6 +12,16 @@ export default class ReplayManager {
   watch(object) {
     this.watchList.push(new ReplayObject(object, this.wallCounter));
   }
+  getAgents() {
+    // gets the list of all the agents in the replay buffer
+    let agents = [];
+    this.replayList.forEach((object) => {
+      if (object.sprite.tag === "agent") {
+        agents.push(object.sprite);
+      }
+    });
+    return agents;
+  }
   endEpisode() {
     this.replayList = this.replayList.concat(this.watchList).slice();
     this.watchList = [];

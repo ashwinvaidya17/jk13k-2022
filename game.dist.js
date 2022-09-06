@@ -746,6 +746,8 @@
       x: 100,
       y: 400,
       rotation: 0,
+      tag: "agent",
+      isVisible: true,
       width: body.width,
       height: body.height,
       children: [body, gun],
@@ -807,7 +809,7 @@
   }
 
   // js/enemy.js
-  function Enemy(agent, obstacles) {
+  function Enemy(agents, obstacles) {
     let canvas = getCanvas();
     let directions = [
       [0, 1],
@@ -860,7 +862,7 @@
       height: ENEMYDIM,
       color: "green",
       room: _discretizeRoom(obstacles),
-      agent,
+      agents,
       timeCounter: 0,
       trajectory: [],
       update: function(dt) {
@@ -886,10 +888,27 @@
           this.trajectory = this._aStar();
         }
       },
+      _getNearestAgent: function() {
+        let minDist = Infinity;
+        let nearestAgent = this.agents[this.agents.length - 1];
+        for (let agent of this.agents) {
+          if (agent.isVisible) {
+            let dist = Math.sqrt(
+              agent.x - this.x ^ 2 + (agent.y - this.y) ^ 2
+            );
+            if (dist < minDist) {
+              minDist = dist;
+              nearestAgent = agent;
+            }
+          }
+        }
+        return nearestAgent;
+      },
       _aStar: function() {
+        let agent = this._getNearestAgent();
         let goal = [
-          Math.floor(this.agent.x / ENEMYDIM),
-          Math.floor(this.agent.y / ENEMYDIM)
+          Math.floor(agent.x / ENEMYDIM),
+          Math.floor(agent.y / ENEMYDIM)
         ];
         let start = {
           x: Math.floor(this.x / ENEMYDIM),
@@ -953,7 +972,7 @@
       this.startTime = wallTime;
       this.shouldRender = false;
     }
-    save(dt) {
+    save() {
       if (this.sprite.children == void 0) {
         this.locationHistory.push({
           x: this.sprite.x,
@@ -988,6 +1007,9 @@
         }
       } else {
         this.shouldRender = false;
+        if (this.sprite.isVisible != void 0) {
+          this.sprite.isVisible = false;
+        }
       }
     }
   };
@@ -1004,12 +1026,21 @@
     watch(object) {
       this.watchList.push(new ReplayObject(object, this.wallCounter));
     }
+    getAgents() {
+      let agents = [];
+      this.replayList.forEach((object) => {
+        if (object.sprite.tag === "agent") {
+          agents.push(object.sprite);
+        }
+      });
+      return agents;
+    }
     endEpisode() {
       this.replayList = this.replayList.concat(this.watchList).slice();
       this.watchList = [];
       this.wallCounter = 0;
     }
-    update(dt) {
+    update() {
       this.watchList.forEach((object) => {
         object.save(this.wallCounter);
       });
@@ -1091,17 +1122,21 @@
   initPointer();
   function createLoop() {
     let room = MakeRoom();
+    let replayManager = new ReplayManager();
     let agent = Agent();
-    let enemy = Enemy(agent, room.objects);
-    bulletList = [];
-    lmbPressed = false;
-    replayManager = new ReplayManager();
+    var agents = replayManager.getAgents();
+    agents.push(agent);
+    let enemy = Enemy(agents, room.objects);
+    let bulletList = [];
+    let lmbPressed = false;
     replayManager.watch(agent);
     replayManager.watch(enemy);
     function resetEpisode() {
       room = MakeRoom();
       agent = Agent();
-      enemy = Enemy(agent, room.objects);
+      agents = replayManager.getAgents();
+      agents.push(agent);
+      enemy = Enemy(agents, room.objects);
       bulletList = [];
       lmbPressed = false;
       replayManager.watch(agent);

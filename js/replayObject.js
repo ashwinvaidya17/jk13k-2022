@@ -47,6 +47,9 @@ export default class ReplayObject {
       }
     } else {
       this.shouldRender = false;
+      if (this.sprite.isVisible != undefined) {
+        this.sprite.isVisible = false;
+      }
     }
   }
 }

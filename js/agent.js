@@ -47,6 +47,8 @@ export default function Agent() {
     x: 100,
     y: 400,
     rotation: 0,
+    tag: "agent", // tag to identify the object
+    isVisible: true,
     width: body.width,
     height: body.height,
     children: [body, gun],
