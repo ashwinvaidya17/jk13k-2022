@@ -3,11 +3,11 @@
   var noop = () => {
   };
   var srOnlyStyle = "position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);";
-  function addToDom(node, canvas) {
-    let container = canvas.parentNode;
+  function addToDom(node, canvas2) {
+    let container = canvas2.parentNode;
     node.setAttribute("data-kontra", "");
     if (container) {
-      let target = container.querySelector("[data-kontra]:last-of-type") || canvas;
+      let target = container.querySelector("[data-kontra]:last-of-type") || canvas2;
       container.insertBefore(node, target.nextSibling);
     } else {
       document.body.appendChild(node);
@@ -43,8 +43,8 @@
   function getContext() {
     return context;
   }
-  function init$1(canvas, { contextless = false } = {}) {
-    canvasEl = document.getElementById(canvas) || canvas || document.querySelector("canvas");
+  function init$1(canvas2, { contextless = false } = {}) {
+    canvasEl = document.getElementById(canvas2) || canvas2 || document.querySelector("canvas");
     if (contextless) {
       canvasEl = canvasEl || new Proxy({}, handler$1);
     }
@@ -269,6 +269,114 @@
   function factory$8() {
     return new Sprite(...arguments);
   }
+  var fontSizeRegex = /(\d+)(\w+)/;
+  function parseFont(font) {
+    let match = font.match(fontSizeRegex);
+    let size = +match[1];
+    let unit = match[2];
+    let computed = size;
+    return {
+      size,
+      unit,
+      computed
+    };
+  }
+  var Text = class extends GameObject {
+    init({
+      text = "",
+      textAlign = "",
+      lineHeight = 1,
+      font = getContext().font,
+      ...props
+    } = {}) {
+      text = "" + text;
+      super.init({
+        text,
+        textAlign,
+        lineHeight,
+        font,
+        ...props
+      });
+      this._p();
+    }
+    get width() {
+      return this._w;
+    }
+    set width(value) {
+      this._d = true;
+      this._w = value;
+      this._fw = value;
+    }
+    get text() {
+      return this._t;
+    }
+    set text(value) {
+      this._d = true;
+      this._t = "" + value;
+    }
+    get font() {
+      return this._f;
+    }
+    set font(value) {
+      this._d = true;
+      this._f = value;
+      this._fs = parseFont(value).computed;
+    }
+    get lineHeight() {
+      return this._lh;
+    }
+    set lineHeight(value) {
+      this._d = true;
+      this._lh = value;
+    }
+    render() {
+      if (this._d) {
+        this._p();
+      }
+      super.render();
+    }
+    _p() {
+      this._s = [];
+      this._d = false;
+      let context2 = this.context;
+      context2.font = this.font;
+      if (!this._s.length && this.text.includes("\n")) {
+        let width = 0;
+        this.text.split("\n").map((str) => {
+          this._s.push(str);
+          width = Math.max(width, context2.measureText(str).width);
+        });
+        this._w = this._fw || width;
+      }
+      if (!this._s.length) {
+        this._s.push(this.text);
+        this._w = this._fw || context2.measureText(this.text).width;
+      }
+      this.height = this._fs + (this._s.length - 1) * this._fs * this.lineHeight;
+      this._uw();
+    }
+    draw() {
+      let alignX = 0;
+      let textAlign = this.textAlign;
+      let context2 = this.context;
+      textAlign = this.textAlign || (context2.canvas.dir == "rtl" ? "right" : "left");
+      alignX = textAlign == "right" ? this.width : textAlign == "center" ? this.width / 2 | 0 : 0;
+      this._s.map((str, index) => {
+        context2.textBaseline = "top";
+        context2.textAlign = textAlign;
+        context2.fillStyle = this.color;
+        context2.font = this.font;
+        context2.fillText(
+          str,
+          alignX,
+          this._fs * this.lineHeight * index
+        );
+      });
+    }
+  };
+  function factory$7() {
+    return new Text(...arguments);
+  }
   var pointers = /* @__PURE__ */ new WeakMap();
   var callbacks$1 = {};
   var pressedButtons = {};
@@ -277,8 +385,8 @@
     1: "middle",
     2: "right"
   };
-  function getPointer(canvas = getCanvas()) {
-    return pointers.get(canvas);
+  function getPointer(canvas2 = getCanvas()) {
+    return pointers.get(canvas2);
   }
   function circleRectCollision(object, pointer) {
     let { x, y, width, height } = getWorldRect(object);
@@ -304,8 +412,8 @@
     return parseFloat(style.getPropertyValue(value)) || 0;
   }
   function getCanvasOffset(pointer) {
-    let { canvas, _s } = pointer;
-    let rect = canvas.getBoundingClientRect();
+    let { canvas: canvas2, _s } = pointer;
+    let rect = canvas2.getBoundingClientRect();
     let transform = _s.transform != "none" ? _s.transform.replace("matrix(", "").split(",") : [1, 1, 1, 1];
     let transformScaleX = parseFloat(transform[0]);
     let transformScaleY = parseFloat(transform[3]);
@@ -355,8 +463,8 @@
   }
   function pointerHandler(evt, eventName) {
     evt.preventDefault();
-    let canvas = evt.target;
-    let pointer = pointers.get(canvas);
+    let canvas2 = evt.target;
+    let pointer = pointers.get(canvas2);
     let { scaleX, scaleY, offsetX, offsetY } = getCanvasOffset(pointer);
     let isTouchEvent = evt.type.includes("touch");
     if (isTouchEvent) {
@@ -400,33 +508,33 @@
   }
   function initPointer({
     radius = 5,
-    canvas = getCanvas()
+    canvas: canvas2 = getCanvas()
   } = {}) {
-    let pointer = pointers.get(canvas);
+    let pointer = pointers.get(canvas2);
     if (!pointer) {
-      let style = window.getComputedStyle(canvas);
+      let style = window.getComputedStyle(canvas2);
       pointer = {
         x: 0,
         y: 0,
         radius,
         touches: { length: 0 },
-        canvas,
+        canvas: canvas2,
         _cf: [],
         _lf: [],
         _o: [],
         _oo: null,
         _s: style
       };
-      pointers.set(canvas, pointer);
+      pointers.set(canvas2, pointer);
     }
-    canvas.addEventListener("mousedown", pointerDownHandler);
-    canvas.addEventListener("touchstart", pointerDownHandler);
-    canvas.addEventListener("mouseup", pointerUpHandler);
-    canvas.addEventListener("touchend", pointerUpHandler);
-    canvas.addEventListener("touchcancel", pointerUpHandler);
-    canvas.addEventListener("blur", blurEventHandler$2);
-    canvas.addEventListener("mousemove", mouseMoveHandler);
-    canvas.addEventListener("touchmove", mouseMoveHandler);
+    canvas2.addEventListener("mousedown", pointerDownHandler);
+    canvas2.addEventListener("touchstart", pointerDownHandler);
+    canvas2.addEventListener("mouseup", pointerUpHandler);
+    canvas2.addEventListener("touchend", pointerUpHandler);
+    canvas2.addEventListener("touchcancel", pointerUpHandler);
+    canvas2.addEventListener("blur", blurEventHandler$2);
+    canvas2.addEventListener("mousemove", mouseMoveHandler);
+    canvas2.addEventListener("touchmove", mouseMoveHandler);
     if (!pointer._t) {
       pointer._t = true;
       on("tick", () => {
@@ -440,8 +548,8 @@
     return pointer;
   }
   function clear(context2) {
-    let canvas = context2.canvas;
-    context2.clearRect(0, 0, canvas.width, canvas.height);
+    let canvas2 = context2.canvas;
+    context2.clearRect(0, 0, canvas2.width, canvas2.height);
   }
   function GameLoop({
     fps = 60,
@@ -573,13 +681,13 @@
       ...props
     }) {
       this._o = [];
-      let canvas = context2.canvas;
+      let canvas2 = context2.canvas;
       let section = this._dn = document.createElement("section");
       section.tabIndex = -1;
       section.style = srOnlyStyle;
       section.id = id;
       section.setAttribute("aria-label", name);
-      addToDom(section, canvas);
+      addToDom(section, canvas2);
       Object.assign(this, {
         id,
         name,
@@ -589,7 +697,7 @@
         sortFunction,
         ...props
       });
-      let { width, height } = canvas;
+      let { width, height } = canvas2;
       let x = width / 2;
       let y = height / 2;
       this.camera = factory$9({
@@ -785,6 +893,12 @@
       id: "room",
       objects: [ground1, ground2]
     });
+    return factory$2(
+      {
+        id: "startScreen",
+        objects: [startButon2]
+      }
+    );
   }
 
   // js/game.js
@@ -792,6 +906,37 @@
   initPointer();
   var agent = Agent();
   var room = MakeRoom();
+  var startButon = Button({
+    x: 300,
+    y: 100,
+    anchor: { x: 0.5, y: 0.5 },
+    text: {
+      text: "Start Game",
+      color: "white",
+      font: "20px Arial, sans-serif",
+      anchor: { x: 0.5, y: 0.5 }
+    },
+    padX: 20,
+    padY: 10,
+    render() {
+      if (this.focused) {
+        this.context.setLineDash([8, 10]);
+        this.context.lineWidth = 3;
+        this.context.strokeStyle = "red";
+        this.context.strokeRect(0, 0, this.width, this.height);
+      }
+      if (this.pressed) {
+        this.textNode.color = "yellow";
+      } else if (this.hovered) {
+        this.textNode.color = "red";
+        canvas.style.cursor = "pointer";
+      } else {
+        this.textNode.color = "red";
+        canvas.style.cursor = "initial";
+      }
+    }
+  });
+  var screen = "gameScreen";
   var loop = GameLoop({
     update: function(dt) {
       room.update();
