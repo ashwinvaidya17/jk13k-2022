@@ -417,7 +417,7 @@
     let transform = _s.transform != "none" ? _s.transform.replace("matrix(", "").split(",") : [1, 1, 1, 1];
     let transformScaleX = parseFloat(transform[0]);
     let transformScaleY = parseFloat(transform[3]);
-    let borderWidth = (getPropValue(_s, "border-left-width") + getPropValue(_s, "border-right-width")) * transformScaleX;
+    let borderWidth2 = (getPropValue(_s, "border-left-width") + getPropValue(_s, "border-right-width")) * transformScaleX;
     let borderHeight = (getPropValue(_s, "border-top-width") + getPropValue(_s, "border-bottom-width")) * transformScaleY;
     let paddingWidth = (getPropValue(_s, "padding-left") + getPropValue(_s, "padding-right")) * transformScaleX;
     let paddingHeight = (getPropValue(_s, "padding-top") + getPropValue(_s, "padding-bottom")) * transformScaleY;
@@ -958,31 +958,46 @@
   }
 
   // js/constants.js
-  var gravity = 200;
+  var GRAVITY = 200;
+  var AGENTSPEED = 200;
+  var JUMPFORCE = -250;
+  var ENEMYSPEED = 100;
+  var ENEMYDIM = 40;
+  var BULLETVELOCITY = 10;
+  var MAXHITCOUNT = 3;
 
   // js/agent.js
   initKeys();
-  var speed = 200;
-  var jumpForce = -250;
   function Agent() {
     let body = factory$8({
       x: 0,
       y: 0,
       width: 20,
       height: 40,
-      color: "white"
+      color: "white",
+      flip_direction: function() {
+      }
     });
     let gun = factory$8({
-      x: body.width + 10,
+      x: body.width,
       y: 3,
-      width: 20,
+      width: 30,
       height: 5,
       color: "white",
       rotation: 0,
-      anchor: { x: 0, y: this.y }
+      anchor: { x: 0, y: 0 },
+      flip_direction: function(right) {
+        if (right) {
+          this.x = body.width;
+          this.y = 3;
+        } else {
+          this.x = 0;
+          this.y = 8;
+        }
+      }
     });
     return factory$9({
-      x: 0,
+      x: 100,
       y: 400,
       rotation: 0,
       width: body.width,
@@ -990,31 +1005,40 @@
       children: [body, gun],
       y_vel: 0,
       apply_gravity: false,
+      going_right: true,
       update: function(dt) {
-        this.children.forEach((child) => child.update(dt));
-        if (keyPressed("arrowleft")) {
-          this.x -= speed * dt;
+        if (keyPressed("a") || keyPressed("arrowleft")) {
+          this.x -= AGENTSPEED * dt;
+          this.going_right = false;
         }
-        if (keyPressed("arrowright")) {
-          this.x += speed * dt;
+        if (keyPressed("d") || keyPressed("arrowright")) {
+          this.x += AGENTSPEED * dt;
+          this.going_right = true;
         }
         if (keyPressed("space") && !this.apply_gravity) {
-          this.y_vel = jumpForce;
+          this.y_vel = JUMPFORCE;
         }
         if (this.apply_gravity) {
-          this.y_vel += gravity * dt;
+          this.y_vel += GRAVITY * dt;
           this.y += this.y_vel * dt;
         }
         let pointer = getPointer();
-        this.children[1].rotation = Math.atan2(
-          pointer.y - this.y,
-          pointer.x - this.x
-        );
-        this.children[1].rotation = clamp(
-          -Math.PI / 2,
-          Math.PI / 2,
-          this.children[1].rotation
-        );
+        let temp_rotation = Math.atan2(pointer.y - this.y, pointer.x - this.x);
+        if (this.going_right) {
+          this.children[1].rotation = clamp(
+            -Math.PI / 2,
+            Math.PI / 2,
+            temp_rotation
+          );
+        } else {
+          if (temp_rotation <= -Math.PI / 2 && temp_rotation >= -Math.PI || temp_rotation >= Math.PI / 2 && temp_rotation <= Math.PI) {
+            this.children[1].rotation = temp_rotation;
+          }
+        }
+        this.children.forEach((child) => {
+          child.update(dt);
+          child.flip_direction(this.going_right);
+        });
       },
       render: function() {
         this.children.forEach((child) => child.render());
@@ -1185,11 +1209,11 @@
       height: 40,
       color: "white"
     });
-    let ground2 = factory$8({
-      x: 400,
-      y: 650,
-      width: 400,
-      height: 40,
+    let obstacle3 = factory$8({
+      x: 200,
+      y: 200,
+      width: 200,
+      height: 20,
       color: "white"
     });
     return factory$2({

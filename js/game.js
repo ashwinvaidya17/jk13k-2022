@@ -1,4 +1,4 @@
-import { collides, GameLoop, init, initPointer, pointerPressed } from "kontra";
+import { collides, GameLoop, init, initPointer, pointerPressed, pointerPressed } from "kontra";
 import Agent from "./agent";
 import Bullet from "./bullet";
 import { BULLETVELOCITY, MAXHITCOUNT } from "./constants";
