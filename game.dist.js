@@ -422,8 +422,8 @@
     let paddingWidth = (getPropValue(_s, "padding-left") + getPropValue(_s, "padding-right")) * transformScaleX;
     let paddingHeight = (getPropValue(_s, "padding-top") + getPropValue(_s, "padding-bottom")) * transformScaleY;
     return {
-      scaleX: (rect.width - borderWidth - paddingWidth) / canvas.width,
-      scaleY: (rect.height - borderHeight - paddingHeight) / canvas.height,
+      scaleX: (rect.width - borderWidth2 - paddingWidth) / canvas2.width,
+      scaleY: (rect.height - borderHeight - paddingHeight) / canvas2.height,
       offsetX: rect.left + (getPropValue(_s, "border-left-width") + getPropValue(_s, "padding-left")) * transformScaleX,
       offsetY: rect.top + (getPropValue(_s, "border-top-width") + getPropValue(_s, "padding-top")) * transformScaleY
     };
@@ -546,6 +546,155 @@
       });
     }
     return pointer;
+  }
+  function track(...objects) {
+    objects.flat().map((object) => {
+      let canvas2 = object.context ? object.context.canvas : getCanvas();
+      let pointer = pointers.get(canvas2);
+      if (!object._r) {
+        object._r = object.render;
+        object.render = function() {
+          pointer._cf.push(this);
+          this._r();
+        };
+        pointer._o.push(object);
+      }
+    });
+  }
+  function pointerPressed(button) {
+    return !!pressedButtons[button];
+  }
+  var Button2 = class extends Sprite {
+    init({
+      padX = 0,
+      padY = 0,
+      text,
+      disabled = false,
+      onDown,
+      onUp,
+      ...props
+    } = {}) {
+      super.init({
+        padX,
+        padY,
+        ...props
+      });
+      this.textNode = factory$7({
+        ...text,
+        context: this.context
+      });
+      if (!this.width) {
+        this.width = this.textNode.width;
+        this.height = this.textNode.height;
+      }
+      track(this);
+      this.addChild(this.textNode);
+      this._od = onDown || noop;
+      this._ou = onUp || noop;
+      let button = this._dn = document.createElement("button");
+      button.style = srOnlyStyle;
+      button.textContent = this.text;
+      if (disabled) {
+        this.disable();
+      }
+      button.addEventListener("focus", () => this.focus());
+      button.addEventListener("blur", () => this.blur());
+      button.addEventListener("keydown", (evt) => this._kd(evt));
+      button.addEventListener("keyup", (evt) => this._ku(evt));
+      addToDom(button, this.context.canvas);
+      this._uw();
+      this._p();
+    }
+    get text() {
+      return this.textNode.text;
+    }
+    set text(value) {
+      this._d = true;
+      this.textNode.text = value;
+    }
+    destroy() {
+      this._dn.remove();
+    }
+    _p() {
+      if (this.text != this._dn.textContent) {
+        this._dn.textContent = this.text;
+      }
+      this.textNode._p();
+      let width = this.textNode.width + this.padX * 2;
+      let height = this.textNode.height + this.padY * 2;
+      this.width = Math.max(width, this.width);
+      this.height = Math.max(height, this.height);
+      this._uw();
+    }
+    render() {
+      if (this._d) {
+        this._p();
+      }
+      super.render();
+    }
+    enable() {
+      this.disabled = this._dn.disabled = false;
+      this.onEnable();
+    }
+    disable() {
+      this.disabled = this._dn.disabled = true;
+      this.onDisable();
+    }
+    focus() {
+      if (!this.disabled) {
+        this.focused = true;
+        if (document.activeElement != this._dn)
+          this._dn.focus();
+        this.onFocus();
+      }
+    }
+    blur() {
+      this.focused = false;
+      if (document.activeElement == this._dn)
+        this._dn.blur();
+      this.onBlur();
+    }
+    onOver() {
+      if (!this.disabled) {
+        this.hovered = true;
+      }
+    }
+    onOut() {
+      this.hovered = false;
+    }
+    onEnable() {
+    }
+    onDisable() {
+    }
+    onFocus() {
+    }
+    onBlur() {
+    }
+    onDown() {
+      if (!this.disabled) {
+        this.pressed = true;
+        this._od();
+      }
+    }
+    onUp() {
+      if (!this.disabled) {
+        this.pressed = false;
+        this._ou();
+      }
+    }
+    _kd(evt) {
+      if (evt.code == "Enter" || evt.code == "Space") {
+        this.onDown();
+      }
+    }
+    _ku(evt) {
+      if (evt.code == "Enter" || evt.code == "Space") {
+        this.onUp();
+      }
+    }
+  };
+  function factory$6() {
+    return new Button2(...arguments);
   }
   function clear(context2) {
     let canvas2 = context2.canvas;
@@ -873,7 +1022,161 @@
     });
   }
 
-  // js/temp_room.js
+  // js/bullet.js
+  function Bullet(x, y, dx, dy) {
+    return factory$8({
+      x,
+      y,
+      width: 10,
+      height: 10,
+      color: "red",
+      dx,
+      dy,
+      hitCount: 0
+    });
+  }
+
+  // js/enemy.js
+  function Enemy(agent2, obstacles) {
+    let canvas2 = getCanvas();
+    let directions = [
+      [0, 1],
+      [0, -1],
+      [1, 0],
+      [-1, 0],
+      [1, 1],
+      [1, -1],
+      [-1, 1],
+      [-1, -1]
+    ];
+    function _fillObstacles(obstacles2, room2) {
+      for (let obstacle of obstacles2) {
+        let x = Math.floor(obstacle.x / ENEMYDIM);
+        let y = Math.floor(obstacle.y / ENEMYDIM);
+        let w = Math.floor(obstacle.width / ENEMYDIM);
+        let h = Math.floor(obstacle.height / ENEMYDIM);
+        for (let i = x; i < x + w; i++) {
+          for (let j = y; j < y + h; j++) {
+            room2[j][i] = 1;
+          }
+        }
+      }
+      return room2;
+    }
+    function _discretizeRoom(obstacles2) {
+      let nRows = Math.floor(canvas2.height / ENEMYDIM);
+      let nCols = Math.floor(canvas2.width / ENEMYDIM);
+      let room2 = [];
+      for (let i = 0; i < nRows; i++) {
+        room2.push(new Array(nCols).fill(0));
+      }
+      return _fillObstacles(obstacles2, room2);
+    }
+    function findMin(open) {
+      let min = open[0];
+      let index = 0;
+      for (let i = 1; i < open.length; i++) {
+        if (open[i].f < min.f) {
+          min = open[i];
+          index = i;
+        }
+      }
+      return [index, min];
+    }
+    return factory$8({
+      x: 50,
+      y: 50,
+      width: ENEMYDIM,
+      height: ENEMYDIM,
+      color: "green",
+      room: _discretizeRoom(obstacles),
+      agent: agent2,
+      timeCounter: 0,
+      trajectory: [],
+      update: function(dt) {
+        this.timeCounter += dt;
+        if (this.timeCounter > 2) {
+          this.trajectory = this._aStar();
+          this.timeCounter = 0;
+        }
+        if (this.trajectory.length > 0) {
+          let next = this.trajectory[0];
+          let currX = Math.floor(this.x / ENEMYDIM);
+          let currY = Math.floor(this.y / ENEMYDIM);
+          if (next[0] === currX && next[1] === currY) {
+            this.trajectory.shift();
+          }
+          let xDir = Math.sign(next[0] - currX);
+          let yDir = Math.sign(next[1] - currY);
+          this.x += xDir * dt * ENEMYSPEED;
+          this.y += yDir * dt * ENEMYSPEED;
+          this.x = clamp(0, canvas2.width - ENEMYDIM, this.x);
+          this.y = clamp(0, canvas2.height - ENEMYDIM, this.y);
+        } else {
+          this.trajectory = this._aStar();
+        }
+      },
+      _aStar: function() {
+        let goal = [
+          Math.floor(this.agent.x / ENEMYDIM),
+          Math.floor(this.agent.y / ENEMYDIM)
+        ];
+        let start = {
+          x: Math.floor(this.x / ENEMYDIM),
+          y: Math.floor(this.y / ENEMYDIM),
+          h: 1,
+          parent: null
+        };
+        let open = [start];
+        let closed = [];
+        let path = [];
+        while (open.length > 0) {
+          let minEle = findMin(open);
+          let current = minEle[1];
+          let index = minEle[0];
+          if (current.x === goal[0] && current.y === goal[1]) {
+            while (current) {
+              path.push([current.x, current.y]);
+              current = current.parent;
+            }
+            return path.reverse();
+          }
+          open.splice(index, 1);
+          closed.push(current);
+          for (let i = 0; i < directions.length; i++) {
+            let next = {
+              x: current.x + directions[i][0],
+              y: current.y + directions[i][1],
+              h: 0
+            };
+            if (next.x < 0 || next.x >= this.room[0].length || next.y < 0 || next.y >= this.room.length || this.room[next.y][next.x] === 1) {
+              continue;
+            }
+            let distance = Math.abs(goal[0] - next.x) + Math.abs(goal[1] - next.y);
+            if (!open.find((x) => x.x === next.x && x.y === next.y)) {
+              open.push({
+                x: next.x,
+                y: next.y,
+                h: 1 + current.h + distance,
+                parent: current
+              });
+              let neighbor = closed.find((x) => x.x === next.x && x.y === next.y);
+              if (neighbor) {
+                if (current.h + distance < neighbor.h) {
+                  neighbor.h = current.h + distance;
+                  neighbor.parent = current;
+                }
+              }
+            }
+          }
+        }
+        return false;
+      }
+    });
+  }
+
+  // js/room.js
+  var borderWidth = 20;
   function MakeRoom() {
     let ground1 = factory$8({
       x: 0,
@@ -901,11 +1204,56 @@
     );
   }
 
+  // js/startScreen.js
+  initPointer();
+  function StartScreen() {
+    let startButon2 = factory$6({
+      x: 300,
+      y: 100,
+      anchor: { x: 0.5, y: 0.5 },
+      text: {
+        text: "Start Game",
+        color: "white",
+        font: "20px Arial, sans-serif",
+        anchor: { x: 0.5, y: 0.5 }
+      },
+      padX: 20,
+      padY: 10,
+      render() {
+        if (this.focused) {
+          this.context.setLineDash([8, 10]);
+          this.context.lineWidth = 3;
+          this.context.strokeStyle = "red";
+          this.context.strokeRect(0, 0, this.width, this.height);
+        }
+        if (this.pressed) {
+          this.textNode.color = "yellow";
+        } else if (this.hovered) {
+          this.textNode.color = "red";
+          canvas.style.cursor = "pointer";
+        } else {
+          this.textNode.color = "red";
+          canvas.style.cursor = "initial";
+        }
+      }
+    });
+    return factory$2(
+      {
+        id: "startScreen",
+        objects: [startButon2]
+      }
+    );
+  }
+
   // js/game.js
   init$1();
   initPointer();
-  var agent = Agent();
+  var startScreen = StartScreen();
   var room = MakeRoom();
+  var agent = Agent();
+  var enemy = Enemy(agent, room.objects);
+  var bulletList = [];
+  var lmbPressed = false;
   var startButon = Button({
     x: 300,
     y: 100,
@@ -939,25 +1287,79 @@
   var screen = "gameScreen";
   var loop = GameLoop({
     update: function(dt) {
-      room.update();
-      agent.update(dt);
-      let collision = false;
-      for (let obj of room.objects) {
-        if (collides(agent, obj)) {
-          agent.y = obj.y - agent.height;
-          agent.y_vel = 0;
-          agent.apply_gravity = false;
-          collision = true;
-        }
-      }
-      if (!collision) {
-        agent.apply_gravity = true;
+      switch (screen) {
+        case "startScreen":
+          break;
+        case "gameScreen":
+          updateGameScreen(dt);
+          break;
+        case "gameOverScreen":
+          break;
       }
     },
     render: function() {
-      room.render();
-      agent.render();
+      switch (screen) {
+        case "startScreen":
+          break;
+        case "gameScreen":
+          renderGameScreen();
+          break;
+        case "gameOverScreen":
+          break;
+      }
     }
   });
   loop.start();
+  function renderGameScreen() {
+    room.render();
+    agent.render();
+    enemy.render();
+    bulletList.forEach((bullet) => {
+      bullet.render();
+    });
+  }
+  function updateGameScreen(dt) {
+    room.update();
+    agent.update(dt);
+    enemy.update(dt);
+    let collision = false;
+    for (let obj of room.objects) {
+      if (collides(agent, obj)) {
+        agent.y = obj.y - agent.height;
+        agent.y_vel = 0;
+        agent.apply_gravity = false;
+        collision = true;
+      }
+      for (let bullets of bulletList) {
+        if (collides(bullets, obj)) {
+          bullets.hitCount++;
+          if (bullets.x + bullets.width > obj.x && bullets.x < obj.x || bullets.x < obj.x + obj.width && bullets.x + bullets.width > obj.x + obj.width) {
+            bullets.dx = -bullets.dx;
+          }
+          if (bullets.y + bullets.height > obj.y && bullets.y < obj.y || bullets.y < obj.y + obj.height && bullets.y + bullets.height > obj.y + obj.height) {
+            bullets.dy = -bullets.dy;
+          }
+        }
+      }
+    }
+    if (!collision) {
+      agent.apply_gravity = true;
+    }
+    if (pointerPressed("left")) {
+      if (!lmbPressed) {
+        lmbPressed = true;
+        let vx = Math.cos(agent.children[1].rotation) * BULLETVELOCITY;
+        let vy = Math.sin(agent.children[1].rotation) * BULLETVELOCITY;
+        let posX = agent.x + Math.cos(agent.children[1].rotation) * agent.children[1].width;
+        let posY = agent.y + agent.children[1].height / 2 + Math.sin(agent.children[1].rotation) * agent.children[1].width;
+        bulletList.push(Bullet(posX, posY, vx, vy));
+      }
+    } else {
+      lmbPressed = false;
+    }
+    bulletList = bulletList.filter((bullet) => bullet.hitCount <= MAXHITCOUNT);
+    bulletList.forEach((bullet) => {
+      bullet.update(dt);
+    });
+  }
 })();
