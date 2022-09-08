@@ -1,11 +1,4 @@
-import {
-  Button,
-  collides,
-  GameLoop,
-  init,
-  initPointer,
-  pointerPressed,
-} from "kontra";
+import { collides, GameLoop, init, initPointer, pointerPressed } from "kontra";
 import Agent from "./agent";
 import Bullet from "./bullet";
 import { BULLETVELOCITY, MAXHITCOUNT } from "./constants";
@@ -32,45 +25,6 @@ function createLoop() {
   replayManager.watch(enemy);
 
   let startScreen = StartScreen();
-  let startButon = Button({
-    // sprite properties
-    x: 300,
-    y: 100,
-    anchor: { x: 0.5, y: 0.5 },
-
-    // text properties
-    text: {
-      text: "Start Game",
-      color: "white",
-      font: "20px Arial, sans-serif",
-      anchor: { x: 0.5, y: 0.5 },
-    },
-    // button properties
-    padX: 20,
-    padY: 10,
-    render() {
-      // focused by keyboard
-      if (this.focused) {
-        this.context.setLineDash([8, 10]);
-        this.context.lineWidth = 3;
-        this.context.strokeStyle = "red";
-        this.context.strokeRect(0, 0, this.width, this.height);
-      }
-
-      // pressed by mouse, touch, or enter/space on keyboard
-      if (this.pressed) {
-        this.textNode.color = "yellow";
-      }
-      // hovered by mouse
-      else if (this.hovered) {
-        this.textNode.color = "red";
-        canvas.style.cursor = "pointer"; //jshint ignore:line
-      } else {
-        this.textNode.color = "red";
-        canvas.style.cursor = "initial"; //jshint ignore:line
-      }
-    },
-  });
   let screen = "gameScreen";
 
   function renderGameScreen() {
@@ -83,7 +37,7 @@ function createLoop() {
     });
     for (let object of replayManager.replayList) {
       if (object.shouldRender == true) {
-        if (object.sprite.children == undefined) {
+        if (object.sprite.children.length === 0) {
           object.sprite.render();
         } else {
           for (let child of object.sprite.children) {
@@ -150,11 +104,11 @@ function createLoop() {
         let vy = Math.sin(agent.children[1].rotation) * BULLETVELOCITY;
         let posX =
           agent.x +
-          Math.cos(agent.children[1].rotation) * agent.children[1].width;
+          Math.cos(agent.children[1].rotation) * (agent.children[1].width / 2);
         let posY =
           agent.y +
           agent.children[1].height / 2 +
-          Math.sin(agent.children[1].rotation) * agent.children[1].width;
+          Math.sin(agent.children[1].rotation) * (agent.children[1].width / 2);
         let bullet = Bullet(posX, posY, vx, vy);
         bulletList.push(bullet);
         replayManager.watch(bullet);

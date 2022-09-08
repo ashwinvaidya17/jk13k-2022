@@ -6,7 +6,7 @@ export default class ReplayObject {
     this.shouldRender = false;
   }
   save() {
-    if (this.sprite.children == undefined) {
+    if (this.sprite.children.length === 0) {
       this.locationHistory.push({
         x: this.sprite.x,
         y: this.sprite.y,
@@ -30,7 +30,7 @@ export default class ReplayObject {
       time - this.startTime < this.locationHistory.length
     ) {
       this.shouldRender = true;
-      if (this.sprite.children == undefined) {
+      if (this.sprite.children.length === 0) {
         this.sprite.x = this.locationHistory[time - this.startTime].x;
         this.sprite.y = this.locationHistory[time - this.startTime].y;
         this.sprite.rotation =

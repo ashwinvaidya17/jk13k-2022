@@ -23,6 +23,15 @@ export default class ReplayManager {
     return agents;
   }
   endEpisode() {
+    for (let object of this.watchList) {
+      if (object.sprite.tag === "agent") {
+        for (let child of object.sprite.children) {
+          child.opacity = 0.2;
+        }
+      } else {
+        object.sprite.opacity = 0.2;
+      }
+    }
     this.replayList = this.replayList.concat(this.watchList).slice();
     this.watchList = [];
     this.wallCounter = 0;

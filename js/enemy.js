@@ -1,4 +1,4 @@
-import { clamp, getCanvas, Sprite } from "kontra";
+import { clamp, getCanvas, randInt, Sprite } from "kontra";
 import { ENEMYDIM, ENEMYSPEED } from "./constants";
 
 export default function Enemy(agents, obstacles) {
@@ -48,12 +48,14 @@ export default function Enemy(agents, obstacles) {
     }
     return [index, min];
   }
+  let enemyImage = new Image();
+  enemyImage.src = "assets/enemy.png";
+  enemyImage.width = ENEMYDIM;
+  enemyImage.height = ENEMYDIM;
   return Sprite({
-    x: 50,
+    x: randInt(20, canvas.width - 20),
     y: 50,
-    width: ENEMYDIM,
-    height: ENEMYDIM,
-    color: "green",
+    image: enemyImage,
     room: _discretizeRoom(obstacles),
     agents: agents,
     timeCounter: 0,

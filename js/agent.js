@@ -1,9 +1,11 @@
 import {
   clamp,
   GameObject,
+  getCanvas,
   getPointer,
   initKeys,
   keyPressed,
+  randInt,
   Sprite,
 } from "kontra";
 import { AGENTSPEED, GRAVITY, JUMPFORCE } from "./constants";
@@ -11,41 +13,48 @@ import { AGENTSPEED, GRAVITY, JUMPFORCE } from "./constants";
 initKeys();
 
 export default function Agent() {
+  let bodyImage = new Image();
+  bodyImage.src = "assets/agent.png";
+  bodyImage.width = 40;
+  bodyImage.height = 50;
   let body = Sprite({
     x: 0, // starting x,y position of the sprite
     y: 0,
-    width: 20, // width and height of the sprite
-    height: 40,
-    color: "white",
+    image: bodyImage,
+    // width: 20, // width and height of the sprite
+    // height: 40,
+    // color: "white",
     flip_direction: function () {
       // TODO change direction of the sprite
     },
   });
 
+  let gunImage = new Image();
+  gunImage.src = "assets/gun.png";
+  gunImage.width = 30;
+  gunImage.height = 15;
   let gun = Sprite({
+    image: gunImage,
     x: body.width,
-    y: 3,
-    width: 30,
-    height: 5,
-    color: "white",
+    y: 5,
     rotation: 0,
     anchor: { x: 0, y: 0 }, // anchor point for rotation
     flip_direction: function (right) {
       if (right) {
-        this.x = body.width;
-        this.y = 3;
-        // TODO change direction of sprite
+        this.x = body.width - 10;
+        this.y = 5;
+        this.scaleX = 1;
       } else {
-        this.x = 0;
-        this.y = 8;
-        // TODO change direction of sprite
+        this.x = 10;
+        this.y = 15;
+        this.image.scaleX = -1;
       }
     },
   });
 
   return GameObject({
-    x: 100,
-    y: 400,
+    x: randInt(body.width + 20, getCanvas().width - body.width + 20),
+    y: getCanvas().height - body.height,
     rotation: 0,
     tag: "agent", // tag to identify the object
     isVisible: true,
