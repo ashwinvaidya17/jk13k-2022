@@ -9,10 +9,11 @@ esbuild.build({
     kontra({
       gameObject: {
         anchor: true,
-        opacity: false,
+        opacity: true,
         ttl: true,
         velocity: true,
         rotation: true,
+        group: true,
       },
       text: {
         newline: true,
@@ -23,6 +24,7 @@ esbuild.build({
         clamp: false,
         length: false,
       },
+      sprite: { image: true },
     }),
   ],
 });

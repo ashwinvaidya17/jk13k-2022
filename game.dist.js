@@ -564,7 +564,7 @@
   function pointerPressed(button) {
     return !!pressedButtons[button];
   }
-  var Button2 = class extends Sprite {
+  var Button = class extends Sprite {
     init({
       padX = 0,
       padY = 0,
@@ -694,7 +694,7 @@
     }
   };
   function factory$6() {
-    return new Button2(...arguments);
+    return new Button(...arguments);
   }
   function clear(context2) {
     let canvas2 = context2.canvas;
@@ -1000,6 +1000,8 @@
       x: 100,
       y: 400,
       rotation: 0,
+      tag: "agent",
+      isVisible: true,
       width: body.width,
       height: body.height,
       children: [body, gun],
@@ -1061,7 +1063,7 @@
   }
 
   // js/enemy.js
-  function Enemy(agent2, obstacles) {
+  function Enemy(agents, obstacles) {
     let canvas2 = getCanvas();
     let directions = [
       [0, 1],
@@ -1073,7 +1075,7 @@
       [-1, 1],
       [-1, -1]
     ];
-    function _fillObstacles(obstacles2, room2) {
+    function _fillObstacles(obstacles2, room) {
       for (let obstacle of obstacles2) {
         let x = Math.floor(obstacle.x / ENEMYDIM);
         let y = Math.floor(obstacle.y / ENEMYDIM);
@@ -1081,20 +1083,20 @@
         let h = Math.floor(obstacle.height / ENEMYDIM);
         for (let i = x; i < x + w; i++) {
           for (let j = y; j < y + h; j++) {
-            room2[j][i] = 1;
+            room[j][i] = 1;
           }
         }
       }
-      return room2;
+      return room;
     }
     function _discretizeRoom(obstacles2) {
       let nRows = Math.floor(canvas2.height / ENEMYDIM);
       let nCols = Math.floor(canvas2.width / ENEMYDIM);
-      let room2 = [];
+      let room = [];
       for (let i = 0; i < nRows; i++) {
-        room2.push(new Array(nCols).fill(0));
+        room.push(new Array(nCols).fill(0));
       }
-      return _fillObstacles(obstacles2, room2);
+      return _fillObstacles(obstacles2, room);
     }
     function findMin(open) {
       let min = open[0];
@@ -1114,7 +1116,7 @@
       height: ENEMYDIM,
       color: "green",
       room: _discretizeRoom(obstacles),
-      agent: agent2,
+      agents,
       timeCounter: 0,
       trajectory: [],
       update: function(dt) {
@@ -1140,10 +1142,27 @@
           this.trajectory = this._aStar();
         }
       },
+      _getNearestAgent: function() {
+        let minDist = Infinity;
+        let nearestAgent = this.agents[this.agents.length - 1];
+        for (let agent of this.agents) {
+          if (agent.isVisible) {
+            let dist = Math.sqrt(
+              agent.x - this.x ^ 2 + (agent.y - this.y) ^ 2
+            );
+            if (dist < minDist) {
+              minDist = dist;
+              nearestAgent = agent;
+            }
+          }
+        }
+        return nearestAgent;
+      },
       _aStar: function() {
+        let agent = this._getNearestAgent();
         let goal = [
-          Math.floor(this.agent.x / ENEMYDIM),
-          Math.floor(this.agent.y / ENEMYDIM)
+          Math.floor(agent.x / ENEMYDIM),
+          Math.floor(agent.y / ENEMYDIM)
         ];
         let start = {
           x: Math.floor(this.x / ENEMYDIM),
@@ -1199,14 +1218,136 @@
     });
   }
 
+  // js/replayObject.js
+  var ReplayObject = class {
+    constructor(sprite, wallTime) {
+      this.sprite = sprite;
+      this.locationHistory = [];
+      this.startTime = wallTime;
+      this.shouldRender = false;
+    }
+    save() {
+      if (this.sprite.children == void 0) {
+        this.locationHistory.push({
+          x: this.sprite.x,
+          y: this.sprite.y,
+          rotation: this.sprite.rotation
+        });
+      } else {
+        let data = [];
+        for (let child of this.sprite.children) {
+          data.push({
+            x: this.sprite.x + child.x,
+            y: this.sprite.y + child.y,
+            rotation: this.sprite.rotation + child.rotation
+          });
+        }
+        this.locationHistory.push(data);
+      }
+    }
+    update(time) {
+      if (time >= this.startTime && time - this.startTime < this.locationHistory.length) {
+        this.shouldRender = true;
+        if (this.sprite.children == void 0) {
+          this.sprite.x = this.locationHistory[time - this.startTime].x;
+          this.sprite.y = this.locationHistory[time - this.startTime].y;
+          this.sprite.rotation = this.locationHistory[time - this.startTime].rotation;
+        } else {
+          for (let i = 0; i < this.sprite.children.length; i++) {
+            this.sprite.children[i].x = this.locationHistory[time - this.startTime][i].x;
+            this.sprite.children[i].y = this.locationHistory[time - this.startTime][i].y;
+            this.sprite.children[i].rotation = this.locationHistory[time - this.startTime][i].rotation;
+          }
+        }
+      } else {
+        this.shouldRender = false;
+        if (this.sprite.isVisible != void 0) {
+          this.sprite.isVisible = false;
+        }
+      }
+    }
+  };
+
+  // js/replayManager.js
+  var ReplayManager = class {
+    constructor() {
+      this.watchList = [];
+      this.replayList = [];
+      this.bulletsWatchList = [];
+      this.wallCounter = 0;
+      this.counter = 0;
+    }
+    watch(object) {
+      this.watchList.push(new ReplayObject(object, this.wallCounter));
+    }
+    getAgents() {
+      let agents = [];
+      this.replayList.forEach((object) => {
+        if (object.sprite.tag === "agent") {
+          agents.push(object.sprite);
+        }
+      });
+      return agents;
+    }
+    endEpisode() {
+      this.replayList = this.replayList.concat(this.watchList).slice();
+      this.watchList = [];
+      this.wallCounter = 0;
+    }
+    update() {
+      this.watchList.forEach((object) => {
+        object.save(this.wallCounter);
+      });
+      this.replayList.forEach((object) => {
+        object.update(this.wallCounter);
+      });
+      this.wallCounter += 1;
+    }
+  };
+
   // js/room.js
   var borderWidth = 20;
   function MakeRoom() {
-    let ground1 = factory$8({
+    let leftBorder = factory$8({
       x: 0,
-      y: 760,
-      width: 800,
-      height: 40,
+      y: 0,
+      width: borderWidth,
+      height: 700,
+      color: "white"
+    });
+    let rightBorder = factory$8({
+      x: 900 - borderWidth,
+      y: 0,
+      width: borderWidth,
+      height: 700,
+      color: "white"
+    });
+    let bottomBorder = factory$8({
+      x: 0,
+      y: 700 - borderWidth,
+      width: 900,
+      height: borderWidth,
+      color: "white"
+    });
+    let topBorder = factory$8({
+      x: 0,
+      y: 0,
+      width: 900,
+      height: borderWidth,
+      color: "white"
+    });
+    let obstacle1 = factory$8({
+      x: 200,
+      y: 600,
+      width: 200,
+      height: 20,
+      color: "white"
+    });
+    let obstacle2 = factory$8({
+      x: 500,
+      y: 400,
+      width: 200,
+      height: 20,
       color: "white"
     });
     let obstacle3 = factory$8({
@@ -1218,20 +1359,22 @@
     });
     return factory$2({
       id: "room",
-      objects: [ground1, ground2]
+      objects: [
+        leftBorder,
+        bottomBorder,
+        rightBorder,
+        topBorder,
+        obstacle1,
+        obstacle2,
+        obstacle3
+      ]
     });
-    return factory$2(
-      {
-        id: "startScreen",
-        objects: [startButon2]
-      }
-    );
   }
 
   // js/startScreen.js
   initPointer();
   function StartScreen() {
-    let startButon2 = factory$6({
+    let startButon = factory$6({
       x: 300,
       y: 100,
       anchor: { x: 0.5, y: 0.5 },
@@ -1264,7 +1407,7 @@
     return factory$2(
       {
         id: "startScreen",
-        objects: [startButon2]
+        objects: [startButon]
       }
     );
   }
@@ -1272,118 +1415,163 @@
   // js/game.js
   init$1();
   initPointer();
-  var startScreen = StartScreen();
-  var room = MakeRoom();
-  var agent = Agent();
-  var enemy = Enemy(agent, room.objects);
-  var bulletList = [];
-  var lmbPressed = false;
-  var startButon = Button({
-    x: 300,
-    y: 100,
-    anchor: { x: 0.5, y: 0.5 },
-    text: {
-      text: "Start Game",
-      color: "white",
-      font: "20px Arial, sans-serif",
-      anchor: { x: 0.5, y: 0.5 }
-    },
-    padX: 20,
-    padY: 10,
-    render() {
-      if (this.focused) {
-        this.context.setLineDash([8, 10]);
-        this.context.lineWidth = 3;
-        this.context.strokeStyle = "red";
-        this.context.strokeRect(0, 0, this.width, this.height);
+  function createLoop() {
+    let room = MakeRoom();
+    let replayManager = new ReplayManager();
+    let agent = Agent();
+    var agents = replayManager.getAgents();
+    agents.push(agent);
+    let enemy = Enemy(agents, room.objects);
+    let bulletList = [];
+    let lmbPressed = false;
+    replayManager.watch(agent);
+    replayManager.watch(enemy);
+    let startScreen = StartScreen();
+    let startButon = factory$6({
+      x: 300,
+      y: 100,
+      anchor: { x: 0.5, y: 0.5 },
+      text: {
+        text: "Start Game",
+        color: "white",
+        font: "20px Arial, sans-serif",
+        anchor: { x: 0.5, y: 0.5 }
+      },
+      padX: 20,
+      padY: 10,
+      render() {
+        if (this.focused) {
+          this.context.setLineDash([8, 10]);
+          this.context.lineWidth = 3;
+          this.context.strokeStyle = "red";
+          this.context.strokeRect(0, 0, this.width, this.height);
+        }
+        if (this.pressed) {
+          this.textNode.color = "yellow";
+        } else if (this.hovered) {
+          this.textNode.color = "red";
+          canvas.style.cursor = "pointer";
+        } else {
+          this.textNode.color = "red";
+          canvas.style.cursor = "initial";
+        }
       }
-      if (this.pressed) {
-        this.textNode.color = "yellow";
-      } else if (this.hovered) {
-        this.textNode.color = "red";
-        canvas.style.cursor = "pointer";
-      } else {
-        this.textNode.color = "red";
-        canvas.style.cursor = "initial";
-      }
-    }
-  });
-  var screen = "gameScreen";
-  var loop = GameLoop({
-    update: function(dt) {
-      switch (screen) {
-        case "startScreen":
-          break;
-        case "gameScreen":
-          updateGameScreen(dt);
-          break;
-        case "gameOverScreen":
-          break;
-      }
-    },
-    render: function() {
-      switch (screen) {
-        case "startScreen":
-          break;
-        case "gameScreen":
-          renderGameScreen();
-          break;
-        case "gameOverScreen":
-          break;
-      }
-    }
-  });
-  loop.start();
-  function renderGameScreen() {
-    room.render();
-    agent.render();
-    enemy.render();
-    bulletList.forEach((bullet) => {
-      bullet.render();
     });
-  }
-  function updateGameScreen(dt) {
-    room.update();
-    agent.update(dt);
-    enemy.update(dt);
-    let collision = false;
-    for (let obj of room.objects) {
-      if (collides(agent, obj)) {
-        agent.y = obj.y - agent.height;
-        agent.y_vel = 0;
-        agent.apply_gravity = false;
-        collision = true;
-      }
-      for (let bullets of bulletList) {
-        if (collides(bullets, obj)) {
-          bullets.hitCount++;
-          if (bullets.x + bullets.width > obj.x && bullets.x < obj.x || bullets.x < obj.x + obj.width && bullets.x + bullets.width > obj.x + obj.width) {
-            bullets.dx = -bullets.dx;
-          }
-          if (bullets.y + bullets.height > obj.y && bullets.y < obj.y || bullets.y < obj.y + obj.height && bullets.y + bullets.height > obj.y + obj.height) {
-            bullets.dy = -bullets.dy;
+    let screen = "gameScreen";
+    function renderGameScreen() {
+      room.render();
+      agent.render();
+      enemy.render();
+      bulletList.forEach((bullet) => {
+        bullet.render();
+      });
+      for (let object of replayManager.replayList) {
+        if (object.shouldRender == true) {
+          if (object.sprite.children == void 0) {
+            object.sprite.render();
+          } else {
+            for (let child of object.sprite.children) {
+              child.render();
+            }
           }
         }
       }
     }
-    if (!collision) {
-      agent.apply_gravity = true;
+    function renderStartScreen() {
+      startScreen.render();
     }
-    if (pointerPressed("left")) {
-      if (!lmbPressed) {
-        lmbPressed = true;
-        let vx = Math.cos(agent.children[1].rotation) * BULLETVELOCITY;
-        let vy = Math.sin(agent.children[1].rotation) * BULLETVELOCITY;
-        let posX = agent.x + Math.cos(agent.children[1].rotation) * agent.children[1].width;
-        let posY = agent.y + agent.children[1].height / 2 + Math.sin(agent.children[1].rotation) * agent.children[1].width;
-        bulletList.push(Bullet(posX, posY, vx, vy));
+    function updateGameScreen(dt) {
+      room.update();
+      agent.update(dt);
+      enemy.update(dt);
+      replayManager.update(dt);
+      let collision = false;
+      for (let obj of room.objects) {
+        if (collides(agent, obj)) {
+          agent.y = obj.y - agent.height;
+          agent.y_vel = 0;
+          agent.apply_gravity = false;
+          collision = true;
+        }
+        for (let bullets of bulletList) {
+          if (collides(bullets, obj)) {
+            bullets.hitCount++;
+            if (bullets.x + bullets.width > obj.x && bullets.x < obj.x || bullets.x < obj.x + obj.width && bullets.x + bullets.width > obj.x + obj.width) {
+              bullets.dx = -bullets.dx;
+            }
+            if (bullets.y + bullets.height > obj.y && bullets.y < obj.y || bullets.y < obj.y + obj.height && bullets.y + bullets.height > obj.y + obj.height) {
+              bullets.dy = -bullets.dy;
+            }
+          }
+        }
       }
-    } else {
-      lmbPressed = false;
+      for (let bullet of bulletList) {
+        if (collides(bullet, enemy)) {
+          replayManager.endEpisode();
+          resetEpisode();
+          return;
+        }
+      }
+      if (!collision) {
+        agent.apply_gravity = true;
+      }
+      if (pointerPressed("left")) {
+        if (!lmbPressed) {
+          lmbPressed = true;
+          let vx = Math.cos(agent.children[1].rotation) * BULLETVELOCITY;
+          let vy = Math.sin(agent.children[1].rotation) * BULLETVELOCITY;
+          let posX = agent.x + Math.cos(agent.children[1].rotation) * agent.children[1].width;
+          let posY = agent.y + agent.children[1].height / 2 + Math.sin(agent.children[1].rotation) * agent.children[1].width;
+          let bullet = Bullet(posX, posY, vx, vy);
+          bulletList.push(bullet);
+          replayManager.watch(bullet);
+        }
+      } else {
+        lmbPressed = false;
+      }
+      bulletList = bulletList.filter((bullet) => bullet.hitCount <= MAXHITCOUNT);
+      bulletList.forEach((bullet) => {
+        bullet.update(dt);
+      });
     }
-    bulletList = bulletList.filter((bullet) => bullet.hitCount <= MAXHITCOUNT);
-    bulletList.forEach((bullet) => {
-      bullet.update(dt);
+    function resetEpisode() {
+      room = MakeRoom();
+      agent = Agent();
+      agents = replayManager.getAgents();
+      agents.push(agent);
+      enemy = Enemy(agents, room.objects);
+      bulletList = [];
+      lmbPressed = false;
+      replayManager.watch(agent);
+      replayManager.watch(enemy);
+    }
+    return GameLoop({
+      update: function(dt) {
+        switch (screen) {
+          case "startScreen":
+            renderStartScreen();
+            break;
+          case "gameScreen":
+            updateGameScreen(dt);
+            break;
+          case "gameOverScreen":
+            break;
+        }
+      },
+      render: function() {
+        switch (screen) {
+          case "startScreen":
+            renderStartScreen();
+            break;
+          case "gameScreen":
+            renderGameScreen();
+            break;
+          case "gameOverScreen":
+            break;
+        }
+      }
     });
   }
+  var loop = createLoop();
+  loop.start();
 })();
