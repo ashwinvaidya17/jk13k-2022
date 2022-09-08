@@ -1,9 +1,10 @@
 import { Button, Scene } from "kontra";
-export default function StartScreen() {
+export default function StartScreen(screen) {
+  let buttonPressed = false;
   let startButon = Button({
     // sprite properties
-    x: 300,
-    y: 100,
+    x: 450,
+    y: 350,
     anchor: { x: 0.5, y: 0.5 },
 
     // text properties
@@ -17,7 +18,9 @@ export default function StartScreen() {
     // button properties
     padX: 20,
     padY: 10,
-
+    onDown() {
+      buttonPressed = true
+    },
     render() {
       // focused by keyboard
       if (this.focused) {
@@ -28,7 +31,7 @@ export default function StartScreen() {
       }
       // pressed by mouse, touch, or enter/space on keyboard
       if (this.pressed) {
-        this.textNode.color = "yellow";
+        this.textNode.color = "yellow"        
       }
       // hovered by mouse
       else if (this.hovered) {
@@ -38,10 +41,16 @@ export default function StartScreen() {
         this.textNode.color = "red";
         // canvas.style.cursor = "initial";
       }
-    },
+    }
   });
   return Scene({
     id: "startScreen",
     objects: [startButon],
+    update: function (){
+      if(buttonPressed){
+        return "gameScreen"
+      }
+      return "startScreen"
+    }
   });
 }

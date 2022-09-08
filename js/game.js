@@ -25,7 +25,7 @@ function createLoop() {
   replayManager.watch(enemy);
 
   let startScreen = StartScreen();
-  let screen = "gameScreen";
+  let screen = "startScreen";
 
   function renderGameScreen() {
     // render the game state
@@ -50,6 +50,10 @@ function createLoop() {
 
   function renderStartScreen() {
     startScreen.render();
+  }
+
+  function updateStartScreen(){
+    screen = startScreen.update()
   }
 
   function updateGameScreen(dt) {
@@ -141,10 +145,10 @@ function createLoop() {
     update: function (dt) {
       switch (screen) {
         case "startScreen":
-          renderStartScreen();
+        updateStartScreen();
           break;
         case "gameScreen":
-          updateGameScreen(dt);
+        updateGameScreen(dt);
           break;
         case "gameOverScreen":
           break;
