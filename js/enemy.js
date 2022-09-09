@@ -1,7 +1,7 @@
-import { clamp, getCanvas, Sprite } from "kontra";
+import { clamp, getCanvas, randInt, Sprite } from "kontra";
 import { ENEMYDIM, ENEMYSPEED } from "./constants";
 
-export default function Enemy(agent, obstacles) {
+export default function Enemy(agents, obstacles) {
   let canvas = getCanvas();
   let directions = [
     [0, 1],
@@ -48,14 +48,16 @@ export default function Enemy(agent, obstacles) {
     }
     return [index, min];
   }
+  let enemyImage = new Image();
+  enemyImage.src = "assets/enemy.png";
+  enemyImage.width = ENEMYDIM;
+  enemyImage.height = ENEMYDIM;
   return Sprite({
-    x: 50,
+    x: randInt(20, canvas.width - 20),
     y: 50,
-    width: ENEMYDIM,
-    height: ENEMYDIM,
-    color: "green",
+    image: enemyImage,
     room: _discretizeRoom(obstacles),
-    agent: agent,
+    agents: agents,
     timeCounter: 0,
     trajectory: [],
     update: function (dt) {
@@ -82,10 +84,27 @@ export default function Enemy(agent, obstacles) {
         this.trajectory = this._aStar();
       }
     },
+    _getNearestAgent: function () {
+      let minDist = Infinity;
+      let nearestAgent = this.agents[this.agents.length - 1];
+      for (let agent of this.agents) {
+        if (agent.isVisible) {
+          let dist = Math.sqrt(
+            (agent.x - this.x) ^ (2 + (agent.y - this.y)) ^ 2
+          );
+          if (dist < minDist) {
+            minDist = dist;
+            nearestAgent = agent;
+          }
+        }
+      }
+      return nearestAgent;
+    },
     _aStar: function () {
+      let agent = this._getNearestAgent();
       let goal = [
-        Math.floor(this.agent.x / ENEMYDIM),
-        Math.floor(this.agent.y / ENEMYDIM),
+        Math.floor(agent.x / ENEMYDIM),
+        Math.floor(agent.y / ENEMYDIM),
       ];
       let start = {
         x: Math.floor(this.x / ENEMYDIM),

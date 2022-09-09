@@ -3,28 +3,65 @@ import Agent from "./agent";
 import Bullet from "./bullet";
 import { BULLETVELOCITY, MAXHITCOUNT } from "./constants";
 import Enemy from "./enemy";
+import ReplayManager from "./replayManager";
 import MakeRoom from "./room";
+import StartScreen from "./startScreen";
 
 init();
 initPointer();
 
-let room = MakeRoom();
-let agent = Agent();
-let enemy = Enemy(agent, room.objects);
-let bulletList = []; // list of bullets
-// store if left mouse button is pressed. This is needed so that bullet is not fired during the frames the button
-// is kept pressed.
-let lmbPressed = false;
+function createLoop() {
+  let room = MakeRoom();
+  let replayManager = new ReplayManager();
+  let agent = Agent();
+  var agents = replayManager.getAgents();
+  agents.push(agent);
+  let enemy = Enemy(agents, room.objects);
+  let bulletList = []; // list of bullets
+  // store if left mouse button is pressed. This is needed so that bullet is not fired during the frames the button
+  // is kept pressed.
+  let lmbPressed = false;
+  replayManager.watch(agent);
+  replayManager.watch(enemy);
 
-let loop = GameLoop({
-  // create the main game loop
+  let startScreen = StartScreen();
+  let screen = "startScreen";
 
-  update: function (dt) {
+  function renderGameScreen() {
+    // render the game state
+    room.render();
+    agent.render();
+    enemy.render();
+    bulletList.forEach((bullet) => {
+      bullet.render();
+    });
+    for (let object of replayManager.replayList) {
+      if (object.shouldRender == true) {
+        if (object.sprite.children.length === 0) {
+          object.sprite.render();
+        } else {
+          for (let child of object.sprite.children) {
+            child.render();
+          }
+        }
+      }
+    }
+  }
+
+  function renderStartScreen() {
+    startScreen.render();
+  }
+
+  function updateStartScreen(){
+    screen = startScreen.update()
+  }
+
+  function updateGameScreen(dt) {
     // update the game state
     room.update();
     agent.update(dt);
     enemy.update(dt);
-
+    replayManager.update(dt);
     let collision = false;
 
     for (let obj of room.objects) {
@@ -54,6 +91,13 @@ let loop = GameLoop({
         }
       }
     }
+    for (let bullet of bulletList) {
+      if (collides(bullet, enemy)) {
+        replayManager.endEpisode();
+        resetEpisode();
+        return;
+      }
+    }
     if (!collision) {
       agent.apply_gravity = true;
     }
@@ -64,12 +108,14 @@ let loop = GameLoop({
         let vy = Math.sin(agent.children[1].rotation) * BULLETVELOCITY;
         let posX =
           agent.x +
-          Math.cos(agent.children[1].rotation) * agent.children[1].width;
+          Math.cos(agent.children[1].rotation) * (agent.children[1].width / 2);
         let posY =
           agent.y +
           agent.children[1].height / 2 +
-          Math.sin(agent.children[1].rotation) * agent.children[1].width;
-        bulletList.push(Bullet(posX, posY, vx, vy));
+          Math.sin(agent.children[1].rotation) * (agent.children[1].width / 2);
+        let bullet = Bullet(posX, posY, vx, vy);
+        bulletList.push(bullet);
+        replayManager.watch(bullet);
       }
     } else {
       lmbPressed = false;
@@ -78,16 +124,51 @@ let loop = GameLoop({
     bulletList.forEach((bullet) => {
       bullet.update(dt);
     });
-  },
-  render: function () {
-    // render the game state
-    room.render();
-    agent.render();
-    enemy.render();
-    bulletList.forEach((bullet) => {
-      bullet.render();
-    });
-  },
-});
+  }
 
-loop.start(); // start the game
+  function resetEpisode() {
+    room = MakeRoom();
+    agent = Agent();
+    agents = replayManager.getAgents();
+    agents.push(agent);
+    enemy = Enemy(agents, room.objects);
+
+    bulletList = []; // list of bullets
+    lmbPressed = false;
+    replayManager.watch(agent);
+    replayManager.watch(enemy);
+  }
+
+  return GameLoop({
+    // create the main game loop
+
+    update: function (dt) {
+      switch (screen) {
+        case "startScreen":
+        updateStartScreen();
+          break;
+        case "gameScreen":
+        updateGameScreen(dt);
+          break;
+        case "gameOverScreen":
+          break;
+      }
+    },
+    render: function () {
+      // render the game state
+      switch (screen) {
+        case "startScreen":
+          renderStartScreen();
+          break;
+        case "gameScreen":
+          renderGameScreen();
+          break;
+        case "gameOverScreen":
+          break;
+      }
+    },
+  });
+}
+
+let loop = createLoop();
+loop.start();
