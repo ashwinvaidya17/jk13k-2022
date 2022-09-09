@@ -1,23 +1,34 @@
-import { Button, Scene, setImagePath, load, imageAssets } from "kontra";
+import { Button, Scene, Sprite, getCanvas  } from "kontra";
 export default function StartScreen(screen) {
  
   let buttonPressed = false;
-  setImagePath('assets/');
-  load('blue_button02.png', 'blue_button03.png').then(()=>{console.log("Images loaded")})
   let buttonPressedimage =  new Image();
   buttonPressedimage.src = 'assets/blue_button03.png'
-  buttonPressedimage.width = 100;
-  buttonPressedimage.height = 20;
+  buttonPressedimage.width = 200;
+  buttonPressedimage.height = 40;
   let buttonUnpressedImage = new Image();
   buttonUnpressedImage.src = 'assets/blue_button02.png'
-  buttonUnpressedImage.width = 100;
-  buttonUnpressedImage.height = 20;
+  buttonUnpressedImage.width = 200;
+  buttonUnpressedImage.height = 40;
+  let title = Sprite({
+    x: 450,
+    y: 250,
+    anchor: {x: 0.5, y: 0.5},
+  
+    // required for a rectangle sprite
+    width: 400,
+    height: 50,
+    color: 'red',
+    render: function(){
+      
+    }
+  });
   let startButon = Button({
     // sprite properties
     x: 450,
     y: 350,
     anchor: { x: 0.5, y: 0.5 },
-    image: imageAssets['blue_button02'],
+    image: buttonUnpressedImage,
     // text properties
     text: {
       text: "Start Game",
@@ -37,7 +48,7 @@ export default function StartScreen(screen) {
   });
   return Scene({
     id: "startScreen",
-    objects: [startButon],
+    objects: [startButon, title],
     update: function (){
       if(buttonPressed){
         return "gameScreen"
