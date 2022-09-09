@@ -1,12 +1,23 @@
-import { Button, Scene } from "kontra";
+import { Button, Scene, setImagePath, load, imageAssets } from "kontra";
 export default function StartScreen(screen) {
+ 
   let buttonPressed = false;
+  setImagePath('assets/');
+  load('blue_button02.png', 'blue_button03.png').then(()=>{console.log("Images loaded")})
+  let buttonPressedimage =  new Image();
+  buttonPressedimage.src = 'assets/blue_button03.png'
+  buttonPressedimage.width = 100;
+  buttonPressedimage.height = 20;
+  let buttonUnpressedImage = new Image();
+  buttonUnpressedImage.src = 'assets/blue_button02.png'
+  buttonUnpressedImage.width = 100;
+  buttonUnpressedImage.height = 20;
   let startButon = Button({
     // sprite properties
     x: 450,
     y: 350,
     anchor: { x: 0.5, y: 0.5 },
-
+    image: imageAssets['blue_button02'],
     // text properties
     text: {
       text: "Start Game",
@@ -14,33 +25,14 @@ export default function StartScreen(screen) {
       font: "20px Arial, sans-serif",
       anchor: { x: 0.5, y: 0.5 },
     },
-
-    // button properties
-    padX: 20,
-    padY: 10,
     onDown() {
-      buttonPressed = true
+      buttonPressed = true;
+      this.image = buttonPressedimage;
+      this.y += 5;
     },
-    render() {
-      // focused by keyboard
-      if (this.focused) {
-        this.context.setLineDash([8, 10]);
-        this.context.lineWidth = 3;
-        this.context.strokeStyle = "red";
-        this.context.strokeRect(0, 0, this.width, this.height);
-      }
-      // pressed by mouse, touch, or enter/space on keyboard
-      if (this.pressed) {
-        this.textNode.color = "yellow"        
-      }
-      // hovered by mouse
-      else if (this.hovered) {
-        this.textNode.color = "red";
-        // canvas.style.cursor = "pointer";
-      } else {
-        this.textNode.color = "red";
-        // canvas.style.cursor = "initial";
-      }
+    onUp() {
+      this.image = buttonUnpressedImage;
+      this.y -= 5;
     }
   });
   return Scene({
