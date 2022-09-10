@@ -21,9 +21,6 @@ export default function Agent() {
     x: 0, // starting x,y position of the sprite
     y: 0,
     image: bodyImage,
-    // width: 20, // width and height of the sprite
-    // height: 40,
-    // color: "white",
     flip_direction: function () {
       // TODO change direction of the sprite
     },
