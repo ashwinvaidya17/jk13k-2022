@@ -22,9 +22,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "node build.js",
-    "clean": "rm -rf dist",
-    "prepare": "mkdir dist && cp logo.png dist",
-    "pack": "npm run clean && npm run prepare && js13k-packer index.html dist -o time-shooter.zip && cp dist/time-shooter.zip . && npm run clean",
+    "clean": "rd /s /q dist",
+    "prepare": "mkdir dist",
+    "pack": "npm run clean && npm run prepare && js13k-packer index.html dist -o time-shooter.zip && copy dist/time-shooter.zip . && npm run clean",
     "watch": "npm-watch"
   },
   "repository": {

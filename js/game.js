@@ -53,14 +53,14 @@ function createLoop() {
     startScreen.render();
   }
 
-  function updateStartScreen(){
+  function updateStartScreen() {
     screen = startScreen.update()
   }
 
-  function updateGameOverScreen(){
+  function updateGameOverScreen() {
     screen = gameOverScreen.update()
   }
-  
+
   function rendergameOverScreen() {
     gameOverScreen.render();
   }
@@ -75,7 +75,23 @@ function createLoop() {
 
     for (let obj of room.objects) {
       if (collides(agent, obj)) {
-        agent.y = obj.y - agent.height;
+        // Bottom side
+        if (agent.y + agent.height > obj.y && agent.y < obj.y) {
+          agent.y = obj.y - agent.height;
+        }
+        // Right side
+        else if (agent.x + agent.width > obj.x && agent.x < obj.x) {
+          agent.x = obj.x - agent.width;
+        }
+        // Left side
+        else if (agent.x < obj.x + obj.width && agent.x + agent.width > obj.x + obj.width) {
+          agent.x = obj.x + obj.width;
+        }
+        // Top side
+        else if (agent.y < obj.y + obj.height && agent.y + agent.height > obj.y + obj.height) {
+          agent.y = obj.y + obj.height;
+        }
+
         agent.y_vel = 0;
         agent.apply_gravity = false;
         collision = true;
@@ -152,10 +168,10 @@ function createLoop() {
     update: function (dt) {
       switch (screen) {
         case "startScreen":
-         updateStartScreen();
+          updateStartScreen();
           break;
         case "gameScreen":
-         updateGameScreen(dt);
+          updateGameScreen(dt);
           break;
         case "gameOverScreen":
           updateGameOverScreen();
