@@ -1,11 +1,11 @@
-import { Button, Scene, Sprite, getCanvas  } from "kontra";
-export default function StartScreen() {
+import { Button, Scene, Sprite} from "kontra";
+export default function GameOverScreen() {
  
   let buttonPressed = false;
-  let startImage =  new Image();
-  startImage.src = 'assets/CHAOS.png'
-  startImage.width = 800; 
-  startImage.height = 800;
+  let gameOverImage =  new Image();
+  gameOverImage.src = 'assets/game_over.png'
+  gameOverImage.width = 800;
+  gameOverImage.height = 800;
   let buttonPressedimage =  new Image();
   buttonPressedimage.src = 'assets/blue_button03.png'
   buttonPressedimage.width = 200;
@@ -15,22 +15,20 @@ export default function StartScreen() {
   buttonUnpressedImage.width = 200;
   buttonUnpressedImage.height = 40;
   let title = Sprite({
-    x: 620,
-    y: 350,
+    x: 120,
+    y: 50,
     anchor: {x: 0.5, y: 0.5},
-    width: 800,
-    height: 800,
-    image: startImage
+    width: 100,
+    height: 100,
+    image: gameOverImage
   });
   let startButon = Button({
-    // sprite properties
     x: 450,
     y: 350,
     anchor: { x: 0.5, y: 0.5 },
     image: buttonUnpressedImage,
-    // text properties
     text: {
-      text: "Start Game",
+      text: "Restart",
       color: "white",
       font: "20px Arial, sans-serif",
       anchor: { x: 0.5, y: 0.5 },
@@ -46,13 +44,13 @@ export default function StartScreen() {
     }
   });
   return Scene({
-    id: "startScreen",
+    id: "gameOverScreen",
     objects: [startButon, title],
     update: function (){
       if(buttonPressed){
         return "gameScreen"
       }
-      return "startScreen"
+      return "gameOverScreen"
     }
   });
 }

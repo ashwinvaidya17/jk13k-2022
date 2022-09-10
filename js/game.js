@@ -6,6 +6,7 @@ import Enemy from "./enemy";
 import ReplayManager from "./replayManager";
 import MakeRoom from "./room";
 import StartScreen from "./startScreen";
+import GameOverScreen from "./gameOverScreen"
 
 init();
 initPointer();
@@ -23,9 +24,9 @@ function createLoop() {
   let lmbPressed = false;
   replayManager.watch(agent);
   replayManager.watch(enemy);
-
   let startScreen = StartScreen();
-  let screen = "gameScreen";
+  let gameOverScreen = GameOverScreen();
+  let screen = "startScreen";
 
   function renderGameScreen() {
     // render the game state
@@ -50,6 +51,18 @@ function createLoop() {
 
   function renderStartScreen() {
     startScreen.render();
+  }
+
+  function updateStartScreen(){
+    screen = startScreen.update()
+  }
+
+  function updateGameOverScreen(){
+    screen = gameOverScreen.update()
+  }
+  
+  function rendergameOverScreen() {
+    gameOverScreen.render();
   }
 
   function updateGameScreen(dt) {
@@ -136,22 +149,20 @@ function createLoop() {
   }
 
   return GameLoop({
-    // create the main game loop
-
     update: function (dt) {
       switch (screen) {
         case "startScreen":
-          renderStartScreen();
+         updateStartScreen();
           break;
         case "gameScreen":
-          updateGameScreen(dt);
+         updateGameScreen(dt);
           break;
         case "gameOverScreen":
+          updateGameOverScreen();
           break;
       }
     },
     render: function () {
-      // render the game state
       switch (screen) {
         case "startScreen":
           renderStartScreen();
@@ -160,6 +171,7 @@ function createLoop() {
           renderGameScreen();
           break;
         case "gameOverScreen":
+          rendergameOverScreen();
           break;
       }
     },
