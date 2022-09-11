@@ -58,14 +58,16 @@ export default function Enemy(agents, obstacles) {
     image: enemyImage,
     room: _discretizeRoom(obstacles),
     agents: agents,
-    timeCounter: 0,
+    _astarTimeCounter: 0,
     trajectory: [],
+    timeCounter:0,
     update: function (dt) {
       // Only get new path every n seconds
-      this.timeCounter += dt;
-      if (this.timeCounter > 2) {
+      this.timeCounter+= dt,
+      this._astarTimeCounter += dt;
+      if (this._astarTimeCounter > 2) {
         this.trajectory = this._aStar();
-        this.timeCounter = 0;
+        this._astar_astarTimeCounter = 0;
       }
       if (this.trajectory.length > 0) {
         let next = this.trajectory[0];
