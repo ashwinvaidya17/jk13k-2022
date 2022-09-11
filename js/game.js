@@ -102,6 +102,7 @@ function createLoop() {
       let vely = (agent.y - enemy.y)/hypotenuse * BULLETVELOCITY
       let bullet = Bullet(positionX, positionY, velx, vely);
       bullet.enemyFlag = true;
+      bullet._setImage();
       bulletList.push(bullet);
       replayManager.watch(bullet);
     }
@@ -180,6 +181,7 @@ function createLoop() {
           agent.children[1].height / 2 +
           Math.sin(agent.children[1].rotation) * (agent.children[1].width / 2);
         let bullet = Bullet(posX, posY, vx, vy);
+        bullet._setImage();
         bulletList.push(bullet);
         replayManager.watch(bullet);
       }
