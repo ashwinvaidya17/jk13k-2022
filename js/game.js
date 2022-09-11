@@ -83,6 +83,7 @@ function createLoop() {
       let bullet = Bullet(positionX, positionY, velx, vely);
       bullet.enemyFlag = true;
       bulletList.push(bullet);
+      replayManager.watch(bullet);
     }
     for (let obj of room.objects) {
       if (collides(agent, obj)) {
@@ -161,7 +162,7 @@ function createLoop() {
     }
     bulletList = bulletList.filter((bullet) => bullet.hitCount <= MAXHITCOUNT);
     bulletList.forEach((bullet) => {
-      bullet.update(dt);
+      bullet.update();
     });
   }
 

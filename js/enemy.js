@@ -67,7 +67,7 @@ export default function Enemy(agents, obstacles) {
       this._astarTimeCounter += dt;
       if (this._astarTimeCounter > 2) {
         this.trajectory = this._aStar();
-        this._astar_astarTimeCounter = 0;
+        this._astarTimeCounter = 0;
       }
       if (this.trajectory.length > 0) {
         let next = this.trajectory[0];
