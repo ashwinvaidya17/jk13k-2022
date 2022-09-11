@@ -14,6 +14,8 @@ export default function Bullet(x, y, dx, dy) {
     y: y,
     dx: dx,
     dy: dy,
+    width: 10,
+    height: 10,
     hitCount: 0,
     enemyFlag: false,
     _setImage: function (){
