@@ -6,7 +6,7 @@ import Enemy from "./enemy";
 import ReplayManager from "./replayManager";
 import MakeRoom from "./room";
 import StartScreen from "./startScreen";
-import GameOverScreen from "./gameOverScreen"
+import GameOverScreen from "./gameOverScreen";
 
 init();
 initPointer();
@@ -54,22 +54,42 @@ function createLoop() {
   }
 
   function updateStartScreen() {
-    screen = startScreen.update()
+    screen = startScreen.update();
   }
 
   function updateGameOverScreen() {
-    screen = gameOverScreen.update()
+    screen = gameOverScreen.update();
   }
 
   function rendergameOverScreen() {
     gameOverScreen.render();
   }
 
+  function _checkEnemyCollision() {
+    // Kill agent on collision
+    for (let agent of enemy.agents) {
+      if (agent.isVisible && collides(enemy, agent)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   function updateGameScreen(dt) {
     // update the game state
     room.update();
     agent.update(dt);
+
     enemy.update(dt);
+    if (_checkEnemyCollision()) {
+      // reset replay manager
+      replayManager.reset();
+      // reset episode
+      resetEpisode();
+      screen = "gameOverScreen";
+      return;
+    }
+
     replayManager.update(dt);
     let collision = false;
 
@@ -84,11 +104,17 @@ function createLoop() {
           agent.x = obj.x - agent.width;
         }
         // Left side
-        else if (agent.x < obj.x + obj.width && agent.x + agent.width > obj.x + obj.width) {
+        else if (
+          agent.x < obj.x + obj.width &&
+          agent.x + agent.width > obj.x + obj.width
+        ) {
           agent.x = obj.x + obj.width;
         }
         // Top side
-        else if (agent.y < obj.y + obj.height && agent.y + agent.height > obj.y + obj.height) {
+        else if (
+          agent.y < obj.y + obj.height &&
+          agent.y + agent.height > obj.y + obj.height
+        ) {
           agent.y = obj.y + obj.height;
         }
 
