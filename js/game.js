@@ -1,4 +1,4 @@
-import { collides, GameLoop, init, initPointer, pointerPressed } from "kontra";
+import { collides, GameLoop, init, initPointer, pointerPressed, registerPlugin } from "kontra";
 import Agent from "./agent";
 import Bullet from "./bullet";
 import { BULLETVELOCITY, MAXHITCOUNT } from "./constants";
@@ -73,6 +73,17 @@ function createLoop() {
     replayManager.update(dt);
     let collision = false;
 
+    if(enemy.timeCounter >= 2){
+      enemy.timeCounter = 0;
+      let positionX = enemy.x + enemy.width/2;
+      let positionY = enemy.y + enemy.height/2
+      let hypotenuse = Math.sqrt(Math.pow(agent.x - enemy.x,2)+ Math.pow(agent.y - enemy.y,2))
+      let velx = (agent.x - enemy.x)/hypotenuse * BULLETVELOCITY
+      let vely = (agent.y - enemy.y)/hypotenuse * BULLETVELOCITY
+      let bullet = Bullet(positionX, positionY, velx, vely);
+      bullet.enemyFlag = true;
+      bulletList.push(bullet);
+    }
     for (let obj of room.objects) {
       if (collides(agent, obj)) {
         // Bottom side
@@ -118,9 +129,12 @@ function createLoop() {
     }
     for (let bullet of bulletList) {
       if (collides(bullet, enemy)) {
-        replayManager.endEpisode();
-        resetEpisode();
-        return;
+        if(bullet.enemyFlag == false)
+         { 
+            replayManager.endEpisode();
+            resetEpisode();
+            return;
+        }
       }
     }
     if (!collision) {
