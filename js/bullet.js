@@ -11,6 +11,7 @@ export default function Bullet(x, y, dx, dy) {
     dx: dx,
     dy: dy,
     hitCount: 0,
+    enemyFlag: false,
     image: imageAsset,
   });
 }
