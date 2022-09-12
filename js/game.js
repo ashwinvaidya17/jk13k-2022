@@ -1,4 +1,4 @@
-import { collides, GameLoop, init, initPointer, pointerPressed, registerPlugin } from "kontra";
+import { collides, GameLoop, init, initPointer, pointerPressed } from "kontra";
 import Agent from "./agent";
 import Bullet from "./bullet";
 import { BULLETVELOCITY, MAXHITCOUNT } from "./constants";
@@ -15,7 +15,7 @@ function createLoop() {
   let room = MakeRoom();
   let replayManager = new ReplayManager();
   let agent = Agent();
-  var agents = replayManager.getAgents();
+  let agents = replayManager.getAgents();
   agents.push(agent);
   let enemy = Enemy(agents, room.objects);
   let bulletList = []; // list of bullets
@@ -27,6 +27,8 @@ function createLoop() {
   let startScreen = StartScreen();
   let gameOverScreen = GameOverScreen();
   let screen = "startScreen";
+
+  let pastBulletList = [];
 
   function renderGameScreen() {
     // render the game state
@@ -75,6 +77,11 @@ function createLoop() {
     return false;
   }
 
+  function _nextEpisode() {
+    replayManager.endEpisode();
+    resetEpisode();
+  }
+
   function updateGameScreen(dt) {
     // update the game state
     room.update();
@@ -83,23 +90,21 @@ function createLoop() {
     enemy.update(dt);
     if (_checkEnemyCollision()) {
       // reset replay manager
-      replayManager.reset();
-      // reset episode
-      resetEpisode();
-      screen = "gameOverScreen";
-      return;
+      return _loseGame();
     }
 
     replayManager.update(dt);
     let collision = false;
 
-    if(enemy.timeCounter >= 2){
+    if (enemy.timeCounter >= 2) {
       enemy.timeCounter = 0;
-      let positionX = enemy.x + enemy.width/2;
-      let positionY = enemy.y + enemy.height/2
-      let hypotenuse = Math.sqrt(Math.pow(agent.x - enemy.x,2)+ Math.pow(agent.y - enemy.y,2))
-      let velx = (agent.x - enemy.x)/hypotenuse * BULLETVELOCITY
-      let vely = (agent.y - enemy.y)/hypotenuse * BULLETVELOCITY
+      let positionX = enemy.x + enemy.width / 2;
+      let positionY = enemy.y + enemy.height / 2;
+      let hypotenuse = Math.sqrt(
+        Math.pow(agent.x - enemy.x, 2) + Math.pow(agent.y - enemy.y, 2)
+      );
+      let velx = ((agent.x - enemy.x) / hypotenuse) * BULLETVELOCITY;
+      let vely = ((agent.y - enemy.y) / hypotenuse) * BULLETVELOCITY;
       let bullet = Bullet(positionX, positionY, velx, vely);
       bullet.enemyFlag = true;
       bullet._setImage();
@@ -157,18 +162,28 @@ function createLoop() {
     }
     for (let bullet of bulletList) {
       if (collides(bullet, enemy)) {
-        if(bullet.enemyFlag == false)
-         { 
-            replayManager.endEpisode();
-            resetEpisode();
-            return;
+        if (bullet.enemyFlag == false) {
+          _nextEpisode();
+          return;
         }
+      }
+      // If bullets from the current episode collide with agent from this and past episodes, kill the agent
+      for (let _agent of agents) {
+        if (collides(bullet, _agent)) {
+          return _loseGame();
+        }
+      }
+    }
+    // If the bullets from the past collide with the agent from this episode then kill this agent
+    for (let bullet of pastBulletList) {
+      if (collides(bullet, agent)) {
+        return _loseGame();
       }
     }
     if (!collision) {
       agent.apply_gravity = true;
     }
-    if (pointerPressed("left")) {
+    if (pointerPressed("left") && screen === "gameScreen") {
       if (!lmbPressed) {
         lmbPressed = true;
         let vx = Math.cos(agent.children[1].rotation) * BULLETVELOCITY;
@@ -194,6 +209,14 @@ function createLoop() {
     });
   }
 
+  function _loseGame() {
+    replayManager.reset();
+    // reset episode
+    resetEpisode();
+    screen = "gameOverScreen";
+    return;
+  }
+
   function resetEpisode() {
     room = MakeRoom();
     agent = Agent();
@@ -205,6 +228,7 @@ function createLoop() {
     lmbPressed = false;
     replayManager.watch(agent);
     replayManager.watch(enemy);
+    pastBulletList = replayManager.getBullets();
   }
 
   return GameLoop({

@@ -32,6 +32,18 @@ export default class ReplayManager {
     });
     return agents;
   }
+
+  getBullets() {
+    // gets the list of all the bullets in the replay buffer
+    let bullets = [];
+    this.replayList.forEach((object) => {
+      if (object.sprite.tag === "bullet") {
+        bullets.push(object.sprite);
+      }
+    });
+    return bullets;
+  }
+
   endEpisode() {
     for (let object of this.watchList) {
       if (object.sprite.tag === "agent") {
