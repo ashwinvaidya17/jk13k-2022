@@ -18,11 +18,10 @@ export default function Bullet(x, y, dx, dy) {
     height: 10,
     hitCount: 0,
     enemyFlag: false,
-    _setImage: function (){
-      if(this.enemyFlag)
-        this.image = enemyBulletImage;
-      else
-        this.image= agentBulletImage;
-    }
+    tag: "bullet",
+    _setImage: function () {
+      if (this.enemyFlag) this.image = enemyBulletImage;
+      else this.image = agentBulletImage;
+    },
   });
 }
