@@ -1,17 +1,19 @@
 import { collides, GameLoop, init, initPointer, pointerPressed } from "kontra";
 import Agent from "./agent";
 import Bullet from "./bullet";
-import { BULLETVELOCITY, MAXHITCOUNT } from "./constants";
+import { BULLETVELOCITY, MAXHITCOUNT, ROUNDS } from "./constants";
 import Enemy from "./enemy";
 import ReplayManager from "./replayManager";
 import MakeRoom from "./room";
 import StartScreen from "./startScreen";
 import GameOverScreen from "./gameOverScreen";
+import GameWinScreen from "./winGameScreen";
 
 init();
 initPointer();
 
 function createLoop() {
+  let victoryCounter = 0;
   let room = MakeRoom();
   let replayManager = new ReplayManager();
   let agent = Agent();
@@ -26,6 +28,7 @@ function createLoop() {
   replayManager.watch(enemy);
   let startScreen = StartScreen();
   let gameOverScreen = GameOverScreen();
+  let gameWinScreen = GameWinScreen();
   let screen = "startScreen";
 
   let pastBulletList = [];
@@ -49,6 +52,14 @@ function createLoop() {
         }
       }
     }
+  }
+
+  function updateGameWinScreen() {
+    screen = gameWinScreen.update();
+  }
+
+  function renderGameWinScreen() {
+    gameWinScreen.render();
   }
 
   function renderStartScreen() {
@@ -78,6 +89,7 @@ function createLoop() {
   }
 
   function _nextEpisode() {
+    victoryCounter++;
     replayManager.endEpisode();
     resetEpisode();
   }
@@ -168,11 +180,11 @@ function createLoop() {
         }
       }
       // If bullets from the current episode collide with agent from this and past episodes, kill the agent
-       for (let _agent of agents) {
-         if (collides(bullet, _agent)) {
-           return _loseGame();
-         }
-       }
+      for (let _agent of agents) {
+        if (collides(bullet, _agent)) {
+          return _loseGame();
+        }
+      }
     }
     // If the bullets from the past collide with the agent from this episode then kill this agent
     for (let bullet of pastBulletList) {
@@ -189,9 +201,13 @@ function createLoop() {
         let vx = Math.cos(agent.children[1].rotation) * BULLETVELOCITY;
         let vy = Math.sin(agent.children[1].rotation) * BULLETVELOCITY;
         let posX =
-          Math.cos(agent.children[1].rotation) * (agent.children[1].width) + agent.children[1].x + agent.x;
+          Math.cos(agent.children[1].rotation) * agent.children[1].width +
+          agent.children[1].x +
+          agent.x;
         let posY =
-          Math.sin(agent.children[1].rotation) * (agent.children[1].width)+ agent.children[1].y + agent.y;
+          Math.sin(agent.children[1].rotation) * agent.children[1].width +
+          agent.children[1].y +
+          agent.y;
         let bullet = Bullet(posX, posY, vx, vy);
         bullet._setImage();
         bulletList.push(bullet);
@@ -209,6 +225,7 @@ function createLoop() {
   function _loseGame() {
     replayManager.reset();
     // reset episode
+    victoryCounter = 0;
     resetEpisode();
     screen = "gameOverScreen";
     return;
@@ -226,6 +243,11 @@ function createLoop() {
     replayManager.watch(agent);
     replayManager.watch(enemy);
     pastBulletList = replayManager.getBullets();
+
+    if (victoryCounter === ROUNDS) {
+      screen = "winGameScreen";
+      replayManager.reset();
+    }
   }
 
   return GameLoop({
@@ -240,6 +262,8 @@ function createLoop() {
         case "gameOverScreen":
           updateGameOverScreen();
           break;
+        case "winGameScreen":
+          updateGameWinScreen();
       }
     },
     render: function () {
@@ -253,6 +277,8 @@ function createLoop() {
         case "gameOverScreen":
           rendergameOverScreen();
           break;
+        case "winGameScreen":
+          renderGameWinScreen();
       }
     },
   });
