@@ -168,11 +168,11 @@ function createLoop() {
         }
       }
       // If bullets from the current episode collide with agent from this and past episodes, kill the agent
-      for (let _agent of agents) {
-        if (collides(bullet, _agent)) {
-          return _loseGame();
-        }
-      }
+       for (let _agent of agents) {
+         if (collides(bullet, _agent)) {
+           return _loseGame();
+         }
+       }
     }
     // If the bullets from the past collide with the agent from this episode then kill this agent
     for (let bullet of pastBulletList) {
@@ -189,12 +189,9 @@ function createLoop() {
         let vx = Math.cos(agent.children[1].rotation) * BULLETVELOCITY;
         let vy = Math.sin(agent.children[1].rotation) * BULLETVELOCITY;
         let posX =
-          agent.x +
-          Math.cos(agent.children[1].rotation) * (agent.children[1].width / 2);
+          Math.cos(agent.children[1].rotation) * (agent.children[1].width) + agent.children[1].x + agent.x;
         let posY =
-          agent.y +
-          agent.children[1].height / 2 +
-          Math.sin(agent.children[1].rotation) * (agent.children[1].width / 2);
+          Math.sin(agent.children[1].rotation) * (agent.children[1].width)+ agent.children[1].y + agent.y;
         let bullet = Bullet(posX, posY, vx, vy);
         bullet._setImage();
         bulletList.push(bullet);
