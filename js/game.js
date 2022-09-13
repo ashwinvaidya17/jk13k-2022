@@ -8,12 +8,15 @@ import MakeRoom from "./room";
 import StartScreen from "./startScreen";
 import GameOverScreen from "./gameOverScreen";
 import GameWinScreen from "./winGameScreen";
+import ProgressBar from "./progressBar";
 
 init();
 initPointer();
 
 function createLoop() {
   let victoryCounter = 0;
+  let progressBar = ProgressBar(ROUNDS);
+  progressBar.reset();
   let room = MakeRoom();
   let replayManager = new ReplayManager();
   let agent = Agent();
@@ -36,6 +39,7 @@ function createLoop() {
   function renderGameScreen() {
     // render the game state
     room.render();
+    progressBar.render();
     agent.render();
     enemy.render();
     bulletList.forEach((bullet) => {
@@ -90,6 +94,7 @@ function createLoop() {
 
   function _nextEpisode() {
     victoryCounter++;
+    progressBar.removeIndicator();
     replayManager.endEpisode();
     resetEpisode();
   }
@@ -224,6 +229,7 @@ function createLoop() {
 
   function _loseGame() {
     replayManager.reset();
+    progressBar.reset();
     // reset episode
     victoryCounter = 0;
     resetEpisode();
@@ -246,6 +252,7 @@ function createLoop() {
 
     if (victoryCounter === ROUNDS) {
       screen = "winGameScreen";
+      progressBar.reset();
       replayManager.reset();
     }
   }
