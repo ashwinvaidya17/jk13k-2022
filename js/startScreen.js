@@ -13,6 +13,10 @@ export default function StartScreen() {
   buttonUnpressedImage.src = "assets/blue_button02.png";
   buttonUnpressedImage.width = 200;
   buttonUnpressedImage.height = 40;
+  let instructionsImage = new Image();
+  instructionsImage.src = "assets/instructions.png";
+  instructionsImage.width = 800;
+  instructionsImage.height = 500;
   let title = Sprite({
     x: 620,
     y: 350,
@@ -45,9 +49,17 @@ export default function StartScreen() {
       this.y -= 5;
     },
   });
+  let instructions = Sprite({
+    x: 450,
+    y: 600,
+    anchor: { x: 0.5, y: 0.5 },
+    width: 800,
+    height: 500,
+    image: instructionsImage
+  });
   return Scene({
     id: "startScreen",
-    objects: [startButon, title],
+    objects: [startButon, title, instructions],
     update: function () {
       if (buttonPressed) {
         return "gameScreen";
